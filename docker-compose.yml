@@ -532,6 +532,24 @@ services:
         limits:
           memory: 1G
           cpus: "1.5"
+  
+  ##############################################################################
+  # PRIVATE SERVICES - Jellyseerr (Request Media Management and Monitoring)
+  ##############################################################################
+
+  jellyseerr:
+    image: jellyseerr/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    network_mode: "service:tailscale"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/jellyseerr:/config
+    depends_on:
+      - tailscale
 
   ##############################################################################
   # PRIVATE SERVICES - Gluetun VPN Client
@@ -555,6 +573,7 @@ services:
       - "8686:8686" # Lidarr
       - "8787:8787" # Readarr
       - "6767:6767" # Bazarr
+      - "8191:8191" # flaresolverr
     environment:
       - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-protonvpn}
       - VPN_TYPE=wireguard
@@ -770,6 +789,25 @@ services:
           cpus: "0.2"
 
   ##############################################################################
+  # PRIVATE SERVICES - Flaresolverr (Proxy for Cloudflare DNS over Tor)
+  ##############################################################################
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/flaresolverr/config:/config
+      - ./config/flaresolverr/data:/data
+    depends_on:
+      - gluetun
+
+  ##############################################################################
   # PRIVATE SERVICES - Portainer (Container Management)
   ##############################################################################
 
@@ -788,3 +826,80 @@ services:
         limits:
           memory: 128M
           cpus: "0.2"
+
+  ##############################################################################
+  # MEDIA SERVICES - Navidrome (Music Streaming Server)
+  ##############################################################################
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    networks:
+      - private
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_LOGLEVEL=info
+      - ND_SESSIONTIMEOUT=24h
+      - ND_BASEURL=/navidrome
+      - ND_ENABLETRANSCODINGCONFIG=true
+      - ND_MUSICFOLDER=/music
+      - ND_DATAFOLDER=/data
+      - ND_CACHEFOLDER=/cache
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/navidrome:/data
+      - ./server-data/navidrome/cache:/cache
+      - hetzner-media:/music:ro  # Read-only access to music on Storage Box
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN}`)"
+      - "traefik.http.routers.navidrome.entrypoints=websecure"
+      - "traefik.http.routers.navidrome.tls=true"
+      - "traefik.http.routers.navidrome.tls.certresolver=cloudflare"
+      - "traefik.http.routers.navidrome.middlewares=authelia@docker,security-headers@file"
+      - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
+    depends_on:
+      - traefik
+      - authelia
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  ##############################################################################
+  # MEDIA SERVICES - Audiobookshelf (Audiobook & Podcast Server)
+  ##############################################################################
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    restart: unless-stopped
+    networks:
+      - private
+    environment:
+      - AUDIOBOOKSHELF_UID=${PUID:-1000}
+      - AUDIOBOOKSHELF_GID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/audiobookshelf:/config
+      - ./server-data/audiobookshelf/metadata:/metadata
+      - hetzner-media:/audiobooks:ro  # Read-only access to audiobooks on Storage Box
+      - hetzner-media:/podcasts:ro    # Read-only access to podcasts on Storage Box
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobooks.${DOMAIN}`)"
+      - "traefik.http.routers.audiobookshelf.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf.tls=true"
+      - "traefik.http.routers.audiobookshelf.tls.certresolver=cloudflare"
+      - "traefik.http.routers.audiobookshelf.middlewares=authelia@docker,security-headers@file"
+      - "traefik.http.services.audiobookshelf.loadbalancer.server.port=80"
+    depends_on:
+      - traefik
+      - authelia
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
