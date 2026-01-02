@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
+# Logs
+*.log
+logs/
+
+# Data
+server-data/
+backups/
+*.db
+*.sqlite
+
+# Git
+.git/
+.github/workflows/*.yml
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Sensitive
+secrets/
+*.pem
+*.key
+*.crt
+acme.json
+
+# Generated
+coverage/
+.next/
+.nuxt/
+
+# Markdown that shouldn't be formatted
+CHANGELOG.md
+LICENSE.md
+
+# Large files
+*.svg
+

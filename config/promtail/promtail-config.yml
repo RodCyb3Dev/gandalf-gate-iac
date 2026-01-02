@@ -1,0 +1,92 @@
+##############################################################################
+# PROMTAIL - Log Shipping Configuration
+# Ships logs from various sources to Loki
+##############################################################################
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+##############################################################################
+# SCRAPE CONFIGS
+##############################################################################
+scrape_configs:
+  ##########################################################################
+  # SYSTEM LOGS
+  ##########################################################################
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          host: hetzner-homelab
+          __path__: /var/log/*.log
+
+  ##########################################################################
+  # TRAEFIK LOGS
+  ##########################################################################
+  - job_name: traefik
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: traefik
+          service: traefik
+          __path__: /var/log/traefik/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            msg: msg
+            time: time
+      - labels:
+          level:
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+
+  ##########################################################################
+  # DOCKER CONTAINER LOGS
+  ##########################################################################
+  - job_name: containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container"
+      - source_labels: ["__meta_docker_container_log_stream"]
+        target_label: "stream"
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: "service"
+    pipeline_stages:
+      - docker: {}
+
+  ##########################################################################
+  # SYSLOG (SSH, Auth, etc.)
+  ##########################################################################
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\S+\s+\S+\s+\S+)\s+(?P<hostname>\S+)\s+(?P<service>\S+)(\[(?P<pid>\d+)\])?: (?P<message>.*)$'
+      - labels:
+          service:
+          hostname:
+      - timestamp:
+          source: timestamp
+          format: "Jan _2 15:04:05"

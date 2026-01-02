@@ -1,0 +1,158 @@
+##############################################################################
+# GITHUB ACTIONS - Automated Backup Pipeline
+# Daily backups of configurations and databases to Hetzner Storage Box
+##############################################################################
+
+name: Automated Backup
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Type of backup'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - config-only
+          - database-only
+
+env:
+  SSH_HOST: ${{ secrets.SSH_HOST }}
+  SSH_USER: ${{ secrets.SSH_USER }}
+  SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+  DEPLOY_PATH: /opt/homelab
+  GOTIFY_URL: ${{ secrets.GOTIFY_URL }}
+  GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
+
+jobs:
+  ##############################################################################
+  # BACKUP JOB
+  ##############################################################################
+  backup:
+    name: Execute Backup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Execute backup script
+        id: backup
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'EOF'
+            set -e
+            
+            echo "💾 Starting backup process..."
+            cd ${{ env.DEPLOY_PATH }}
+            
+            # Run backup script
+            bash scripts/backup.sh ${{ inputs.backup_type || 'full' }}
+            
+            # Get backup size and location
+            BACKUP_SIZE=$(du -sh /mnt/hetzner-storage/backups/latest | cut -f1)
+            echo "backup_size=$BACKUP_SIZE" >> $GITHUB_OUTPUT
+            
+            echo "✅ Backup completed successfully!"
+            echo "📦 Backup size: $BACKUP_SIZE"
+          EOF
+
+      - name: Verify backup integrity
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'EOF'
+            echo "🔍 Verifying backup integrity..."
+            cd ${{ env.DEPLOY_PATH }}
+            
+            # Verify backup files exist
+            if [ ! -d "/mnt/hetzner-storage/backups/latest" ]; then
+              echo "❌ Backup directory not found!"
+              exit 1
+            fi
+            
+            # Verify critical files
+            REQUIRED_FILES=(
+              "config/traefik/acme.json"
+              "config/crowdsec/db"
+              "config/authelia"
+            )
+            
+            for file in "${REQUIRED_FILES[@]}"; do
+              if [ ! -e "/mnt/hetzner-storage/backups/latest/$file" ]; then
+                echo "❌ Missing critical file: $file"
+                exit 1
+              fi
+            done
+            
+            echo "✅ Backup integrity verified!"
+          EOF
+
+      - name: Cleanup old backups
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'EOF'
+            echo "🧹 Cleaning up old backups..."
+            
+            # Keep last 30 days of backups
+            find /mnt/hetzner-storage/backups/ -type d -name "backup-*" -mtime +30 -exec rm -rf {} +
+            
+            # Keep last 7 weekly backups
+            # Keep last 3 monthly backups
+            
+            echo "✅ Cleanup completed!"
+          EOF
+
+      - name: Notify success
+        if: success()
+        run: |
+          curl -X POST "${{ env.GOTIFY_URL }}/message?token=${{ env.GOTIFY_TOKEN }}" \
+            -F "title=✅ Backup Successful" \
+            -F "message=Daily backup completed successfully. Size: ${{ steps.backup.outputs.backup_size }}" \
+            -F "priority=5"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          curl -X POST "${{ env.GOTIFY_URL }}/message?token=${{ env.GOTIFY_TOKEN }}" \
+            -F "title=❌ Backup Failed" \
+            -F "message=Daily backup failed. Immediate attention required!" \
+            -F "priority=10"
+
+  ##############################################################################
+  # BACKUP REPORT
+  ##############################################################################
+  backup-report:
+    name: Generate Backup Report
+    runs-on: ubuntu-latest
+    needs: backup
+    if: success()
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Generate report
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ env.SSH_PORT }} ${{ env.SSH_USER }}@${{ env.SSH_HOST }} << 'EOF'
+            echo "📊 Generating backup report..."
+            
+            # Count total backups
+            TOTAL_BACKUPS=$(find /mnt/hetzner-storage/backups/ -maxdepth 1 -type d -name "backup-*" | wc -l)
+            
+            # Calculate total size
+            TOTAL_SIZE=$(du -sh /mnt/hetzner-storage/backups/ | cut -f1)
+            
+            # Get oldest backup
+            OLDEST_BACKUP=$(find /mnt/hetzner-storage/backups/ -maxdepth 1 -type d -name "backup-*" -printf '%T+ %p\n' | sort | head -1 | cut -d' ' -f2)
+            
+            echo "📊 Backup Statistics:"
+            echo "  Total backups: $TOTAL_BACKUPS"
+            echo "  Total size: $TOTAL_SIZE"
+            echo "  Oldest backup: $(basename $OLDEST_BACKUP)"
+          EOF
+

@@ -1,0 +1,249 @@
+##############################################################################
+# DOCKERIGNORE - Exclude files from Docker build context
+# Reduces image size and build time, prevents leaking secrets
+##############################################################################
+
+##############################################################################
+# SECRETS & CREDENTIALS (CRITICAL!)
+##############################################################################
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Secret files
+*secret*.txt
+*password*.txt
+*token*.txt
+*key*.txt
+cf-token
+cf_api_token.txt
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# SSL certificates
+*.crt
+*.p12
+*.pfx
+config/traefik/acme.json
+config/letsencrypt/
+config/cloudflare/
+
+# API tokens
+config/**/credentials*
+config/**/*token*
+config/**/*secret*
+
+##############################################################################
+# VERSION CONTROL
+##############################################################################
+
+.git
+.gitignore
+.gitattributes
+.github/
+
+##############################################################################
+# DOCUMENTATION
+##############################################################################
+
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+docs/
+*.txt
+!requirements.txt
+
+##############################################################################
+# DOCKER
+##############################################################################
+
+# Docker files not needed in image
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+##############################################################################
+# CI/CD
+##############################################################################
+
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+Jenkinsfile
+azure-pipelines.yml
+
+##############################################################################
+# KAMAL
+##############################################################################
+
+.kamal/
+config/deploy.yml
+
+##############################################################################
+# EDITORS & IDEs
+##############################################################################
+
+.vscode/
+.idea/
+.cursor/
+*.code-workspace
+*.sublime-*
+.history/
+
+##############################################################################
+# OPERATING SYSTEM
+##############################################################################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+desktop.ini
+
+##############################################################################
+# LOGS & TEMPORARY FILES
+##############################################################################
+
+# Logs
+*.log
+logs/
+config/traefik/logs/
+config/**/logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*.bak
+*.backup
+*.old
+*~
+
+##############################################################################
+# BUILD ARTIFACTS
+##############################################################################
+
+node_modules/
+bower_components/
+*.pyc
+__pycache__/
+dist/
+build/
+*.egg-info/
+.bundle/
+vendor/
+
+##############################################################################
+# TESTING
+##############################################################################
+
+.pytest_cache/
+.coverage
+htmlcov/
+test-results/
+coverage/
+*.test.db
+
+##############################################################################
+# DATA & STATE
+##############################################################################
+
+# Runtime data
+config/*/data/
+config/*/db/
+config/*/cache/
+**/data/
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Docker volumes
+prometheus-data/
+grafana-data/
+loki-data/
+crowdsec-db/
+authelia-db/
+
+# Backups
+backups/
+*.tar.gz
+*.zip
+*.backup
+
+##############################################################################
+# SCRIPTS (Optional - Include if needed)
+##############################################################################
+
+# Exclude development scripts
+scripts/dev-*.sh
+scripts/test-*.sh
+scripts/local-*.sh
+scripts/cleanup-*.sh
+
+# Allow production scripts
+!scripts/backup.sh
+!scripts/restore.sh
+!scripts/health-check.sh
+
+##############################################################################
+# MONITORING CONFIG (Runtime data only)
+##############################################################################
+
+# Prometheus
+config/prometheus/data/
+
+# Grafana
+config/grafana/grafana.db
+config/grafana/data/
+
+# Loki
+config/loki/data/
+config/loki/chunks/
+
+##############################################################################
+# OLD INFRASTRUCTURE
+##############################################################################
+
+docker-compose-pangolin/
+docker-compose-tailscale/
+old-configs-backup-*/
+
+##############################################################################
+# ALLOW SPECIFIC FILES
+##############################################################################
+
+# Allow necessary config files
+!config/traefik/traefik.yml
+!config/traefik/dynamic/
+!config/crowdsec/acquis.yaml
+!config/crowdsec/profiles.yaml
+!config/authelia/configuration.yml
+!config/prometheus/prometheus.yml
+!config/loki/loki-config.yml
+!config/grafana/provisioning/
+
+# Allow Makefile
+!Makefile
+
+##############################################################################
+# END OF DOCKERIGNORE
+##############################################################################
+

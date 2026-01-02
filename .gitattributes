@@ -1,0 +1,132 @@
+##############################################################################
+# GIT ATTRIBUTES - Configure git behavior for different file types
+##############################################################################
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+##############################################################################
+# SOURCE CODE
+##############################################################################
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# YAML
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# JSON
+*.json text eol=lf
+
+# Markdown
+*.md text eol=lf
+*.markdown text eol=lf
+
+# Configuration files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.dockerignore text eol=lf
+Makefile text eol=lf
+Dockerfile text eol=lf
+
+##############################################################################
+# DOCKER
+##############################################################################
+
+docker-compose*.yml text eol=lf
+Dockerfile* text eol=lf
+
+##############################################################################
+# DOCUMENTATION
+##############################################################################
+
+*.txt text eol=lf
+*.doc diff=astextplain
+*.DOC diff=astextplain
+*.docx diff=astextplain
+*.DOCX diff=astextplain
+*.pdf diff=astextplain
+*.PDF diff=astextplain
+
+##############################################################################
+# BINARY FILES
+##############################################################################
+
+# Images
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.webp binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.rar binary
+
+# Databases
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# SSL Certificates
+*.crt binary
+*.cer binary
+*.p12 binary
+*.pfx binary
+*.pem binary
+
+##############################################################################
+# SECRETS (If using git-crypt - Optional)
+##############################################################################
+
+# Uncomment if using git-crypt:
+# .env filter=git-crypt diff=git-crypt
+# *.key filter=git-crypt diff=git-crypt
+# *.pem filter=git-crypt diff=git-crypt
+# *secret*.txt filter=git-crypt diff=git-crypt
+# *password*.txt filter=git-crypt diff=git-crypt
+# *token*.txt filter=git-crypt diff=git-crypt
+# config/authelia/users_database.yml filter=git-crypt diff=git-crypt
+# config/traefik/acme.json filter=git-crypt diff=git-crypt
+
+##############################################################################
+# DIFF SETTINGS
+##############################################################################
+
+# Better diff for JSON
+*.json diff=json
+
+# Better diff for YAML
+*.yml diff=yaml
+*.yaml diff=yaml
+
+##############################################################################
+# EXPORT-IGNORE (Exclude from exports/archives)
+##############################################################################
+
+.gitattributes export-ignore
+.gitignore export-ignore
+.github/ export-ignore
+docs/ export-ignore
+tests/ export-ignore
+*.md export-ignore
+
+##############################################################################
+# LANGUAGE STATISTICS
+##############################################################################
+
+# Documentation and config shouldn't count in language stats
+*.md linguist-documentation
+*.txt linguist-documentation
+docs/** linguist-documentation
+
+# Exclude vendored/generated code
+config/crowdsec/hub/** linguist-vendored
+

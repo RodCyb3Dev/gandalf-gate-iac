@@ -1,0 +1,342 @@
+##############################################################################
+# AUTHELIA - SSO and 2FA Configuration
+# Maximum Security Authentication Layer
+##############################################################################
+
+##############################################################################
+# SERVER
+##############################################################################
+server:
+  address: "tcp://0.0.0.0:9091"
+  endpoints:
+    authz:
+      forward-auth:
+        implementation: "ForwardAuth"
+  buffers:
+    read: 8192
+    write: 8192
+  timeouts:
+    read: "6s"
+    write: "6s"
+    idle: "30s"
+
+##############################################################################
+# LOGGING
+##############################################################################
+log:
+  level: "info"
+  format: "text"
+  file_path: ""
+  keep_stdout: true
+
+##############################################################################
+# TELEMETRY
+##############################################################################
+telemetry:
+  metrics:
+    enabled: true
+    address: "tcp://0.0.0.0:9959"
+    buffers:
+      read: 4096
+      write: 4096
+
+##############################################################################
+# THEME
+##############################################################################
+theme: "dark"
+
+##############################################################################
+# TOTP (Time-based One-Time Password - 2FA)
+##############################################################################
+totp:
+  disable: false
+  issuer: "rodneyops.com"
+  algorithm: "sha1"
+  digits: 6
+  period: 30
+  skew: 1
+  secret_size: 32
+
+##############################################################################
+# WEBAUTHN (Hardware Keys - Optional)
+##############################################################################
+# webauthn:
+#   disable: false
+#   display_name: 'Homelab'
+#   attestation_conveyance_preference: 'indirect'
+#   user_verification: 'preferred'
+#   timeout: '60s'
+
+##############################################################################
+# DUO (Push Notifications - Optional)
+##############################################################################
+# duo_api:
+#   disable: false
+#   hostname: 'api-xxxxxxxx.duosecurity.com'
+#   integration_key: 'YOUR_INTEGRATION_KEY'
+#   secret_key: 'YOUR_SECRET_KEY'
+
+##############################################################################
+# AUTHENTICATION BACKEND
+##############################################################################
+authentication_backend:
+  password_reset:
+    disable: false
+    custom_url: ""
+
+  refresh_interval: "5m"
+
+  # File-based user database (for simplicity)
+  file:
+    path: "/config/users_database.yml"
+    watch: true
+    password:
+      algorithm: "argon2"
+      argon2:
+        variant: "argon2id"
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+        key_length: 32
+        salt_length: 16
+
+  # LDAP backend (if you want to use LDAP instead)
+  # ldap:
+  #   address: 'ldap://openldap'
+  #   implementation: 'custom'
+  #   timeout: '5s'
+  #   start_tls: false
+  #   tls:
+  #     server_name: ''
+  #     skip_verify: false
+  #     minimum_version: 'TLS1.2'
+  #   base_dn: 'dc=example,dc=com'
+  #   additional_users_dn: 'ou=users'
+  #   users_filter: '(&({username_attribute}={input})(objectClass=person))'
+  #   additional_groups_dn: 'ou=groups'
+  #   groups_filter: '(&(member={dn})(objectClass=groupOfNames))'
+  #   group_search_mode: 'filter'
+  #   user: 'cn=admin,dc=example,dc=com'
+  #   password: 'password'
+  #   attributes:
+  #     username: 'uid'
+  #     display_name: 'displayName'
+  #     mail: 'mail'
+  #     member_of: 'memberOf'
+  #     group_name: 'cn'
+
+##############################################################################
+# PASSWORD POLICY
+##############################################################################
+password_policy:
+  standard:
+    enabled: true
+    min_length: 12
+    max_length: 128
+    require_uppercase: true
+    require_lowercase: true
+    require_number: true
+    require_special: true
+  zxcvbn:
+    enabled: false
+    min_score: 3
+
+##############################################################################
+# ACCESS CONTROL
+##############################################################################
+access_control:
+  default_policy: "deny"
+
+  networks:
+    - name: "internal"
+      networks:
+        - "172.20.0.0/24"
+        - "172.21.0.0/24"
+        - "172.22.0.0/24"
+        - "100.64.0.0/10" # Tailscale
+
+    - name: "vpn"
+      networks:
+        - "100.64.0.0/10" # Tailscale
+
+  rules:
+    # Bypass for health check endpoints
+    - domain:
+        - "auth.rodneyops.com"
+      policy: "bypass"
+      resources:
+        - "^/api/health$"
+        - "^/api/state$"
+
+    # Admin services - require 2FA
+    - domain:
+        - "traefik.rodneyops.com"
+        - "portainer.rodneyops.com"
+      policy: "two_factor"
+      subject:
+        - ["group:admins"]
+
+    # Monitoring - require authentication
+    - domain:
+        - "grafana.rodneyops.com"
+        - "status.rodneyops.com"
+      policy: "two_factor"
+
+    # Notifications - require authentication
+    - domain:
+        - "rodify.rodneyops.com"
+      policy: "one_factor"
+
+    # Allow from internal networks without auth (optional)
+    - domain:
+        - "grafana.rodneyops.com"
+      policy: "bypass"
+      networks:
+        - "internal"
+
+    # Default deny all other requests
+    - domain:
+        - "*.rodneyops.com"
+      policy: "two_factor"
+
+##############################################################################
+# SESSION
+##############################################################################
+session:
+  secret: "file:///run/secrets/authelia_session_secret"
+  name: "authelia_session"
+  same_site: "lax"
+  expiration: "1h"
+  inactivity: "5m"
+  remember_me: "1M"
+
+  cookies:
+    - domain: "rodneyops.com"
+      authelia_url: "https://auth.rodneyops.com"
+      default_redirection_url: "https://grafana.rodneyops.com"
+
+  # Redis backend for session storage (recommended for production)
+  # redis:
+  #   host: 'redis'
+  #   port: 6379
+  #   username: ''
+  #   password: ''
+  #   database_index: 0
+  #   maximum_active_connections: 8
+  #   minimum_idle_connections: 0
+  #   tls:
+  #     server_name: ''
+  #     skip_verify: false
+  #     minimum_version: 'TLS1.2'
+
+##############################################################################
+# REGULATION (Brute Force Protection)
+##############################################################################
+regulation:
+  max_retries: 5
+  find_time: "2m"
+  ban_time: "10m"
+
+##############################################################################
+# STORAGE
+##############################################################################
+storage:
+  encryption_key: "file:///run/secrets/authelia_storage_encryption_key"
+
+  # Local SQLite database
+  local:
+    path: "/var/lib/authelia/db.sqlite3"
+
+  # PostgreSQL backend (recommended for production)
+  # postgres:
+  #   address: 'tcp://postgres:5432'
+  #   database: 'authelia'
+  #   schema: 'public'
+  #   username: 'authelia'
+  #   password: 'authelia_password'
+  #   timeout: '5s'
+  #   tls:
+  #     server_name: ''
+  #     skip_verify: false
+  #     minimum_version: 'TLS1.2'
+
+  # MySQL backend
+  # mysql:
+  #   address: 'tcp://mysql:3306'
+  #   database: 'authelia'
+  #   username: 'authelia'
+  #   password: 'authelia_password'
+  #   timeout: '5s'
+  #   tls:
+  #     server_name: ''
+  #     skip_verify: false
+  #     minimum_version: 'TLS1.2'
+
+##############################################################################
+# NOTIFIER (Email Notifications)
+##############################################################################
+notifier:
+  disable_startup_check: false
+
+  # SMTP (Email)
+  smtp:
+    address: "smtp://smtp.protonmail.ch:587"
+    timeout: "5s"
+    username: "no-reply@kodeflash.dev"
+    password: "${AUTHELIA_NOTIFIER_SMTP_PASSWORD}"
+    sender: "Authelia <no-reply@rodneyops.com>"
+    identifier: "rodneyops.com"
+    subject: "[Authelia] {title}"
+    startup_check_address: "no-reply@kodeflash.dev"
+    disable_require_tls: false
+    disable_html_emails: false
+    tls:
+      server_name: "smtp.protonmail.ch"
+      skip_verify: false
+      minimum_version: "TLS1.2"
+
+  # Filesystem (for testing only - not for production)
+  # filesystem:
+  #   filename: '/var/lib/authelia/notifications.txt'
+
+##############################################################################
+# NTP (Time Synchronization)
+##############################################################################
+ntp:
+  address: "time.cloudflare.com:123"
+  version: 4
+  max_desync: "3s"
+  disable_startup_check: false
+  disable_failure: false
+
+##############################################################################
+# IDENTITY PROVIDERS (OAuth2/OIDC - Optional)
+##############################################################################
+# identity_providers:
+#   oidc:
+#     hmac_secret: 'your_oidc_hmac_secret'
+#     issuer_private_key: |
+#       -----BEGIN RSA PRIVATE KEY-----
+#       ...
+#       -----END RSA PRIVATE KEY-----
+#     access_token_lifespan: '1h'
+#     authorize_code_lifespan: '1m'
+#     id_token_lifespan: '1h'
+#     refresh_token_lifespan: '90m'
+#     enable_client_debug_messages: false
+#     clients:
+#       - id: 'myapp'
+#         description: 'My Application'
+#         secret: 'myapp_secret'
+#         public: false
+#         authorization_policy: 'two_factor'
+#         redirect_uris:
+#           - 'https://myapp.rodneyops.com/oauth2/callback'
+#         scopes:
+#           - 'openid'
+#           - 'profile'
+#           - 'email'
+#           - 'groups'
+#         userinfo_signed_response_alg: 'none'
+#         token_endpoint_auth_method: 'client_secret_basic'
+

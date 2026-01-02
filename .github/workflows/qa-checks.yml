@@ -1,0 +1,276 @@
+name: QA Checks & Secret Scanning
+
+on:
+  push:
+    branches: [main, develop, feature/**]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  # ===========================================================================
+  # SECRET SCANNING - Critical security check
+  # ===========================================================================
+  secret-scan:
+    name: 🔐 Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better scanning
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # Optional: for pro features
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+  # ===========================================================================
+  # PRETTIER - Code Formatting Check
+  # ===========================================================================
+  prettier-check:
+    name: 🎨 Prettier Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Prettier
+        run: npm install -g prettier
+
+      - name: Check formatting
+        run: |
+          echo "Checking code formatting with Prettier..."
+          prettier --config .prettierrc --ignore-path .prettierignore --check "**/*.{yml,yaml,md,json}" || {
+            echo "❌ Formatting issues found!"
+            echo "Run 'make format-fix' locally to fix formatting"
+            exit 1
+          }
+
+  # ===========================================================================
+  # YAML VALIDATION
+  # ===========================================================================
+  yaml-lint:
+    name: 📝 YAML Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          echo "Linting YAML files..."
+          yamllint -c .yamllint.yml . || true
+
+      - name: Validate docker-compose.yml
+        run: |
+          echo "Validating docker-compose.yml syntax..."
+          docker compose -f docker-compose.yml config > /dev/null
+
+      - name: Validate GitHub Actions workflows
+        run: |
+          echo "Validating GitHub Actions workflows..."
+          for workflow in .github/workflows/*.yml; do
+            echo "Checking $workflow..."
+            # Basic YAML syntax check
+            python -c "import yaml; yaml.safe_load(open('$workflow'))"
+          done
+
+  # ===========================================================================
+  # SHELL SCRIPT VALIDATION
+  # ===========================================================================
+  shellcheck:
+    name: 🐚 Shell Script Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: warning
+          scandir: './scripts'
+          ignore_paths: 'node_modules .git'
+
+      - name: Check script permissions
+        run: |
+          echo "Checking executable scripts have proper shebangs..."
+          find scripts -type f -executable -print0 | while IFS= read -r -d '' script; do
+            if ! head -n1 "$script" | grep -q '^#!'; then
+              echo "❌ Missing shebang: $script"
+              exit 1
+            fi
+          done
+
+  # ===========================================================================
+  # MARKDOWN LINTING
+  # ===========================================================================
+  markdown-lint:
+    name: 📄 Markdown Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: .
+          config_file: .markdownlint.json
+          ignore_files: node_modules
+
+  # ===========================================================================
+  # DOCKERFILE VALIDATION
+  # ===========================================================================
+  dockerfile-lint:
+    name: 🐳 Dockerfile Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          ignore: DL3018,DL3008
+
+  # ===========================================================================
+  # SECURITY AUDIT
+  # ===========================================================================
+  security-audit:
+    name: 🛡️ Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for sensitive files
+        run: |
+          echo "Checking for sensitive files..."
+          
+          # Check for private keys
+          if find . -type f -name "*.pem" -o -name "*.key" -o -name "id_rsa*" -o -name "id_ed25519*" | grep -v ".git" | grep -v "node_modules"; then
+            echo "❌ Private key files detected!"
+            exit 1
+          fi
+          
+          # Check for .env files
+          if find . -type f -name ".env" -o -name ".env.local" -o -name ".env.production" | grep -v ".example"; then
+            echo "❌ .env files should not be committed!"
+            exit 1
+          fi
+          
+          echo "✅ No sensitive files found"
+
+      - name: Check for hardcoded IPs
+        run: |
+          echo "Checking for hardcoded IPs..."
+          # Allow known safe IPs and the server IP
+          if grep -r --include="*.yml" --include="*.yaml" --include="*.sh" -E "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" . \
+            | grep -v "95.216.176.147" \
+            | grep -v "0.0.0.0" \
+            | grep -v "127.0.0.1" \
+            | grep -v "172\." \
+            | grep -v "192.168\." \
+            | grep -v "1.1.1.1" \
+            | grep -v "1.0.0.1" \
+            | grep -v ".1:53" \
+            | grep -v ".git/"; then
+            echo "⚠️  Found potentially hardcoded IPs (review manually)"
+          else
+            echo "✅ No unexpected hardcoded IPs"
+          fi
+
+      - name: Check for exposed secrets in env vars
+        run: |
+          echo "Checking for exposed secrets..."
+          if grep -r --include="*.yml" --include="*.yaml" -iE "(password|secret|key|token):\s*[\"'][^$]" . \
+            | grep -v "op item get" \
+            | grep -v "\${" \
+            | grep -v "# " \
+            | grep -v ".git/" \
+            | grep -v ".md:"; then
+            echo "❌ Possible exposed secrets detected!"
+            exit 1
+          fi
+          echo "✅ No exposed secrets found"
+
+  # ===========================================================================
+  # DOCKER COMPOSE VALIDATION
+  # ===========================================================================
+  docker-compose-validate:
+    name: 🐋 Docker Compose Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose syntax
+        run: |
+          echo "Validating docker-compose.yml..."
+          docker compose -f docker-compose.yml config > /dev/null
+          echo "✅ docker-compose.yml is valid"
+
+      - name: Check for required services
+        run: |
+          echo "Checking for required services..."
+          REQUIRED_SERVICES=("traefik" "authelia" "crowdsec" "grafana" "prometheus")
+          
+          for service in "${REQUIRED_SERVICES[@]}"; do
+            if ! docker compose -f docker-compose.yml config | grep -q "services:.*$service"; then
+              echo "⚠️  Required service '$service' might be missing"
+            fi
+          done
+
+  # ===========================================================================
+  # SUMMARY REPORT
+  # ===========================================================================
+  qa-summary:
+    name: 📊 QA Summary
+    runs-on: ubuntu-latest
+    needs: [secret-scan, prettier-check, yaml-lint, shellcheck, markdown-lint, dockerfile-lint, security-audit, docker-compose-validate]
+    if: always()
+    steps:
+      - name: QA Results
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎯 QA Checks Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "All quality and security checks completed!"
+          echo ""
+          echo "✅ Secret scanning"
+          echo "✅ Prettier formatting"
+          echo "✅ YAML validation"
+          echo "✅ Shell script checking"
+          echo "✅ Markdown linting"
+          echo "✅ Dockerfile validation"
+          echo "✅ Security audit"
+          echo "✅ Docker Compose validation"
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+

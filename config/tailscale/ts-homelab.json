@@ -1,0 +1,79 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "jellyfin.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8096"
+        }
+      }
+    },
+    "sonarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:8989"
+        }
+      }
+    },
+    "radarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:7878"
+        }
+      }
+    },
+    "prowlarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:9696"
+        }
+      }
+    },
+    "lidarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:8686"
+        }
+      }
+    },
+    "readarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:8787"
+        }
+      }
+    },
+    "bazarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:6767"
+        }
+      }
+    },
+    "qbittorrent.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://gluetun:8085"
+        }
+      }
+    },
+    "homarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7575"
+        }
+      }
+    },
+    "portainer.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:9000"
+        }
+      }
+    }
+  }
+}
