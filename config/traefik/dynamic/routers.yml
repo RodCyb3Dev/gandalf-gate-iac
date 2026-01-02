@@ -1,0 +1,82 @@
+##############################################################################
+# TRAEFIK - Dynamic Router Configuration
+# Custom routing rules not defined in Docker labels
+##############################################################################
+
+http:
+  routers:
+    ##########################################################################
+    # CATCH-ALL ROUTER (404 page)
+    ##########################################################################
+    catch-all:
+      entryPoints:
+        - websecure
+      rule: "HostRegexp(`{catchall:.*}`)"
+      priority: 1
+      service: noop@internal
+      middlewares:
+        - security-headers
+      tls:
+        certResolver: cloudflare
+
+    ##########################################################################
+    # API GATEWAY (if needed in future)
+    ##########################################################################
+    # api-gateway:
+    #   entryPoints:
+    #     - websecure
+    #   rule: "Host(`api.rodneyops.com`)"
+    #   service: api-gateway
+    #   middlewares:
+    #     - auth-chain
+    #     - rate-limit-api
+    #   tls:
+    #     certResolver: cloudflare
+
+  services:
+    ##########################################################################
+    # CUSTOM SERVICES
+    ##########################################################################
+    # api-gateway:
+    #   loadBalancer:
+    #     servers:
+    #       - url: "http://api-gateway:8080"
+    #     healthCheck:
+    #       path: "/health"
+    #       interval: "30s"
+    #       timeout: "5s"
+
+##############################################################################
+# TCP ROUTERS (if needed for non-HTTP services)
+##############################################################################
+tcp:
+  routers:
+    # Example: SSH passthrough
+    # ssh-router:
+    #   entryPoints:
+    #     - ssh
+    #   rule: "HostSNI(`*`)"
+    #   service: ssh-service
+
+  services:
+    # ssh-service:
+    #   loadBalancer:
+    #     servers:
+    #       - address: "internal-ssh-server:22"
+
+##############################################################################
+# UDP ROUTERS (if needed for VPN, etc.)
+##############################################################################
+# udp:
+#   routers:
+#     wireguard:
+#       entryPoints:
+#         - wireguard
+#       service: wireguard-service
+#
+#   services:
+#     wireguard-service:
+#       loadBalancer:
+#         servers:
+#           - address: "wireguard:51820"
+

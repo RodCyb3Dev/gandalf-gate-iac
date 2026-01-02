@@ -1,0 +1,193 @@
+# Pre-commit hooks for security and quality assurance
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # ============================================================================
+  # SECRET DETECTION (CRITICAL SECURITY)
+  # ============================================================================
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks
+        name: Detect secrets with Gitleaks
+        description: Scan for hardcoded secrets, API keys, tokens
+        entry: gitleaks detect --source . --verbose --no-git
+        language: golang
+        pass_filenames: false
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: Detect secrets with Yelp detector
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: package-lock.json
+
+  # ============================================================================
+  # GENERAL FILE CHECKS
+  # ============================================================================
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+        exclude: \.min\.(js|css)$
+
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+
+      # Check for files that would conflict on case-insensitive filesystems
+      - id: check-case-conflict
+
+      # Ensure JSON files are valid
+      - id: check-json
+
+      # Ensure YAML files are valid
+      - id: check-yaml
+        args: ["--allow-multiple-documents", "--unsafe"]
+        exclude: ^(docker-compose\.yml|\.github/workflows/.*)$
+
+      # Ensure TOML files are valid
+      - id: check-toml
+
+      # Ensure XML files are valid
+      - id: check-xml
+
+      # Check for merge conflicts
+      - id: check-merge-conflict
+
+      # Check for debugging statements
+      - id: debug-statements
+
+      # Detect private keys
+      - id: detect-private-key
+
+      # Check executables have shebangs
+      - id: check-executables-have-shebangs
+
+      # Check shebangs are valid
+      - id: check-shebang-scripts-are-executable
+
+      # Prevent committing to main/master
+      - id: no-commit-to-branch
+        args: ["--branch", "main", "--branch", "master"]
+        stages: [commit]
+
+  # ============================================================================
+  # PRETTIER - Code Formatting
+  # ============================================================================
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        name: Format with Prettier
+        exclude: |
+          (?x)^(
+            .*\.min\.(js|css)$|
+            package-lock\.json|
+            yarn\.lock|
+            pnpm-lock\.yaml|
+            CHANGELOG\.md|
+            \.github/workflows/.*\.yml$
+          )
+        types_or: [yaml, markdown, json, javascript, css, html]
+        args: ["--config", ".prettierrc", "--ignore-path", ".prettierignore"]
+
+  # ============================================================================
+  # YAML VALIDATION & LINTING
+  # ============================================================================
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        name: Lint YAML files
+        args: ["-c", ".yamllint.yml"]
+        types: [yaml]
+
+  # ============================================================================
+  # SHELL SCRIPT VALIDATION
+  # ============================================================================
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        name: Check shell scripts with shellcheck
+        args: ["--severity=warning"]
+        types: [shell]
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.8.0-1
+    hooks:
+      - id: shfmt
+        name: Format shell scripts
+        args: ["-i", "4", "-ci", "-sr", "-w"]
+        types: [shell]
+
+  # ============================================================================
+  # MARKDOWN LINTING
+  # ============================================================================
+
+  - repo: https://github.com/markdownlint/markdownlint
+    rev: v0.12.0
+    hooks:
+      - id: markdownlint
+        name: Lint Markdown files
+        args: ["--config", ".markdownlint.json"]
+
+  # ============================================================================
+  # DOCKER & DOCKERFILE VALIDATION
+  # ============================================================================
+
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: Lint Dockerfiles
+        args: ["--ignore", "DL3018", "--ignore", "DL3008"]
+
+  # ============================================================================
+  # CUSTOM CHECKS
+  # ============================================================================
+
+  - repo: local
+    hooks:
+      # Check for hardcoded IPs
+      - id: check-hardcoded-ips
+        name: Check for hardcoded IPs (except allowed)
+        entry: bash -c 'if grep -rn --include="*.yml" --include="*.yaml" --include="*.sh" -E "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" . | grep -v "95.216.176.147" | grep -v "0.0.0.0" | grep -v "127.0.0.1" | grep -v "172." | grep -v "192.168." | grep -v ".1:53"; then echo "Found hardcoded IPs!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Check for TODO/FIXME in production files
+      - id: check-todos
+        name: Check for unresolved TODOs
+        entry: bash -c 'if grep -rn --include="*.yml" --include="*.yaml" "TODO\|FIXME" .; then echo "Found unresolved TODOs!"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        stages: [push]
+
+      # Validate docker-compose syntax
+      - id: validate-docker-compose
+        name: Validate docker-compose.yml
+        entry: docker compose -f docker-compose.yml config
+        language: system
+        pass_filenames: false
+        files: docker-compose\.yml
+
+      # Check for exposed secrets in environment variables
+      - id: check-env-secrets
+        name: Check for secrets in env vars
+        entry: bash -c 'if grep -rn --include="*.yml" --include="*.yaml" -iE "(password|secret|key|token):\s*[\"'\''][^$]" . | grep -v "op item get" | grep -v "\${" | grep -v "# "; then echo "Found exposed secrets!"; exit 1; fi'
+        language: system
+        pass_filenames: false

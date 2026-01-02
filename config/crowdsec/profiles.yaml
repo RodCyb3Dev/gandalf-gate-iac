@@ -1,0 +1,54 @@
+##############################################################################
+# CROWDSEC - Security Profiles Configuration
+# Define what actions to take when threats are detected
+##############################################################################
+
+name: default_ip_remediation
+#debug: true
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+  - type: ban
+    duration: 4h
+on_success: break
+
+---
+name: default_range_remediation
+#debug: true
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+  - type: ban
+    duration: 4h
+on_success: break
+
+---
+name: captcha_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip" && Alert.Scenario contains "http-"
+decisions:
+  - type: captcha
+    duration: 2h
+on_success: break
+
+---
+name: aggressive_ban
+#debug: true
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
+  - Alert.GetScenario() in ["crowdsecurity/http-bad-user-agent", "crowdsecurity/http-backdoors-attempts", "crowdsecurity/http-probing"]
+decisions:
+  - type: ban
+    duration: 24h
+on_success: break
+
+---
+name: rate_limit_ban
+#debug: true
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
+  - Alert.GetScenario() contains "rate-limit"
+decisions:
+  - type: ban
+    duration: 1h
+on_success: break

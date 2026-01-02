@@ -1,0 +1,205 @@
+##############################################################################
+# TRAEFIK v3 - Static Configuration
+# Maximum Security Reverse Proxy Configuration
+##############################################################################
+
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+##############################################################################
+# API and Dashboard
+##############################################################################
+api:
+  dashboard: true
+  insecure: false
+  debug: false
+
+##############################################################################
+# Entry Points (Ports)
+##############################################################################
+entryPoints:
+  # HTTP (redirect to HTTPS)
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+    # Forward real IP from Cloudflare
+    forwardedHeaders:
+      trustedIPs:
+        - "173.245.48.0/20"
+        - "103.21.244.0/22"
+        - "103.22.200.0/22"
+        - "103.31.4.0/22"
+        - "141.101.64.0/18"
+        - "108.162.192.0/18"
+        - "190.93.240.0/20"
+        - "188.114.96.0/20"
+        - "197.234.240.0/22"
+        - "198.41.128.0/17"
+        - "162.158.0.0/15"
+        - "104.16.0.0/13"
+        - "104.24.0.0/14"
+        - "172.64.0.0/13"
+        - "131.0.72.0/22"
+        - "2400:cb00::/32"
+        - "2606:4700::/32"
+        - "2803:f800::/32"
+        - "2405:b500::/32"
+        - "2405:8100::/32"
+        - "2a06:98c0::/29"
+        - "2c0f:f248::/32"
+
+  # HTTPS (main entry point)
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "rodneyops.com"
+            sans:
+              - "*.rodneyops.com"
+      middlewares:
+        - crowdsec-bouncer@docker
+        - security-headers@file
+        - rate-limit@file
+    # Forward real IP from Cloudflare
+    forwardedHeaders:
+      trustedIPs:
+        - "173.245.48.0/20"
+        - "103.21.244.0/22"
+        - "103.22.200.0/22"
+        - "103.31.4.0/22"
+        - "141.101.64.0/18"
+        - "108.162.192.0/18"
+        - "190.93.240.0/20"
+        - "188.114.96.0/20"
+        - "197.234.240.0/22"
+        - "198.41.128.0/17"
+        - "162.158.0.0/15"
+        - "104.16.0.0/13"
+        - "104.24.0.0/14"
+        - "172.64.0.0/13"
+        - "131.0.72.0/22"
+
+  # Traefik Dashboard (internal only, protected by Authelia)
+  traefik:
+    address: ":8080"
+
+##############################################################################
+# Certificate Resolvers (Let's Encrypt via Cloudflare DNS)
+##############################################################################
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: "rodney@kodeflash.dev"
+      storage: "/acme.json"
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+      # Use DNS-01 challenge with Cloudflare
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+        delayBeforeCheck: 30
+
+##############################################################################
+# Providers
+##############################################################################
+providers:
+  # Docker provider for automatic service discovery
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: public
+    watch: true
+
+  # File provider for dynamic configuration
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+##############################################################################
+# Logs
+##############################################################################
+log:
+  level: INFO
+  filePath: "/var/log/traefik/traefik.log"
+  format: json
+  maxSize: 100
+  maxBackups: 3
+  maxAge: 30
+  compress: true
+
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  bufferingSize: 100
+  filters:
+    statusCodes:
+      - "400-599"
+  fields:
+    defaultMode: keep
+    names:
+      ClientUsername: drop
+    headers:
+      defaultMode: keep
+      names:
+        User-Agent: keep
+        Authorization: drop
+        Content-Type: keep
+
+##############################################################################
+# Metrics (Prometheus)
+##############################################################################
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    entryPoint: traefik
+    manualRouting: false
+
+##############################################################################
+# Tracing (Optional - for advanced debugging)
+##############################################################################
+# tracing:
+#   serviceName: traefik
+#   jaeger:
+#     samplingType: const
+#     samplingParam: 1.0
+#     localAgentHostPort: jaeger:6831
+
+##############################################################################
+# Pilot (Optional - Traefik Dashboard Cloud)
+##############################################################################
+# pilot:
+#   dashboard: false
+
+##############################################################################
+# Experimental Features
+##############################################################################
+experimental:
+  plugins:
+    # CrowdSec bouncer plugin (if using plugin version)
+    # crowdsec-bouncer-traefik-plugin:
+    #   moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+    #   version: "v1.3.0"
+
+##############################################################################
+# Ping (Health Check)
+##############################################################################
+ping:
+  entryPoint: traefik
+
+##############################################################################
+# Server Transport (Security)
+##############################################################################
+serversTransport:
+  insecureSkipVerify: false
+  maxIdleConnsPerHost: 200

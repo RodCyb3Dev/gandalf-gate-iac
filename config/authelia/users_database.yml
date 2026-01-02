@@ -1,0 +1,57 @@
+##############################################################################
+# AUTHELIA - Users Database
+# Define users, passwords, and groups
+##############################################################################
+#
+# IMPORTANT: Generate password hashes using:
+# docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --password 'YOUR_PASSWORD'
+#
+# Replace the password hashes below with your own!
+##############################################################################
+
+users:
+  # Admin user - Rodney
+  rodney:
+    displayname: "Rodney Hammad"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_YOUR_GENERATED_HASH"
+    email: "rodney@kodeflash.dev"
+    groups:
+      - admins
+      - users
+
+  # Example additional user
+  # john:
+  #   displayname: "John Doe"
+  #   password: "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_YOUR_GENERATED_HASH"
+  #   email: "john@rodneyops.com"
+  #   groups:
+  #     - users
+
+##############################################################################
+# GROUP DEFINITIONS
+##############################################################################
+# Groups are used in access control rules to grant permissions
+#
+# Available groups:
+#   - admins: Full access to all services including Traefik dashboard and Portainer
+#   - users: Standard user access to media and monitoring services
+#   - family: Limited access for family members (if needed)
+##############################################################################
+
+##############################################################################
+# PASSWORD GENERATION INSTRUCTIONS
+##############################################################################
+#
+# 1. Generate a secure password hash:
+#    docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --password 'YourSecurePassword123!'
+#
+# 2. Copy the generated hash
+#
+# 3. Replace the password field above with the hash
+#
+# 4. The hash will look like:
+#    $argon2id$v=19$m=65536,t=3,p=4$base64encodedstring$base64encodedstring
+#
+# NEVER use plain text passwords!
+##############################################################################
+

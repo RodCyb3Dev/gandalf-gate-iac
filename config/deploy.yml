@@ -1,0 +1,148 @@
+# Kamal deployment configuration for secure homelab
+# Zero-downtime deployments using Docker images
+
+service: homelab
+image: ghcr.io/rodcyb3dev/homelab
+
+# Servers to deploy to
+servers:
+  web:
+    hosts:
+      - 95.216.176.147
+    labels:
+      traefik.enable: true
+      traefik.http.routers.homelab.rule: Host(`rodneyops.com`)
+      traefik.http.routers.homelab.tls: true
+    options:
+      network: public
+
+# Docker registry configuration
+registry:
+  server: ghcr.io
+  username: RodCyb3Dev
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+# Environment variables
+env:
+  clear:
+    TZ: Europe/Helsinki
+    DOMAIN: rodneyops.com
+    PUID: "1000"
+    PGID: "1000"
+    SMTP_HOST: smtp.protonmail.ch
+    SMTP_PORT: "587"
+    VPN_PROVIDER: protonvpn
+    VPN_ADDRESSES: 10.2.0.2/32
+    VPN_COUNTRIES: Netherlands
+    TAILSCALE_DOMAIN: kooka-lake.ts.net
+    JELLYFIN_PUBLISHED_URL: https://jellyfin.kooka-lake.ts.net
+    GRAFANA_ADMIN_USER: admin
+    GOTIFY_ADMIN_USER: admin
+    KAMAL_REGISTRY: ghcr.io
+  secret:
+    - STORAGE_BOX_PASSWORD
+    - CF_API_TOKEN
+    - TAILSCALE_AUTH_KEY
+    - CROWDSEC_ENROLL_KEY
+    - CROWDSEC_BOUNCER_API_KEY
+    - AUTHELIA_JWT_SECRET
+    - AUTHELIA_SESSION_SECRET
+    - AUTHELIA_STORAGE_ENCRYPTION_KEY
+    - SMTP_USERNAME
+    - SMTP_PASSWORD
+    - GRAFANA_ADMIN_PASSWORD
+    - GOTIFY_ADMIN_PASSWORD
+    - VPN_PRIVATE_KEY
+
+# SSH configuration
+ssh:
+  user: root
+  port: 22
+
+# Builder configuration
+builder:
+  arch: amd64
+  multiarch: false
+
+# Accessories (supporting services that don't change often)
+accessories:
+  db:
+    image: postgres:15-alpine
+    host: YOUR_HETZNER_IP
+    port: 5432
+    env:
+      clear:
+        POSTGRES_DB: homelab
+      secret:
+        - POSTGRES_PASSWORD
+    directories:
+      - data:/var/lib/postgresql/data
+    options:
+      network: private
+
+# Volumes to preserve across deployments
+volumes:
+  - config:/opt/homelab/config
+  - prometheus-data:/opt/homelab/prometheus-data
+  - grafana-data:/opt/homelab/grafana-data
+  - loki-data:/opt/homelab/loki-data
+
+# Healthcheck
+healthcheck:
+  path: /health
+  port: 8080
+  max_attempts: 7
+  interval: 10s
+
+# Asset bridge for static files
+#asset_path: /opt/homelab/public
+
+# Traefik reverse proxy labels
+traefik:
+  options:
+    publish:
+      - 443:443
+      - 80:80
+    network: public
+  args:
+    entryPoints.web.address: ":80"
+    entryPoints.websecure.address: ":443"
+    entryPoints.websecure.http.tls: true
+
+# Backup before deployment
+backup:
+  enabled: true
+  schedule: "0 3 * * *"
+
+# Rollback configuration
+rollback:
+  enabled: true
+  keep_images: 3
+
+# Hooks - run scripts at different deployment stages
+hooks:
+  pre-connect:
+    - echo "Connecting to server..."
+
+  pre-build:
+    - echo "Building Docker image..."
+
+  pre-deploy:
+    - echo "Running pre-deployment health check..."
+    - bash scripts/health-check.sh
+
+  post-deploy:
+    - echo "Running post-deployment verification..."
+    - docker exec traefik traefik healthcheck
+    - echo "Deployment completed successfully!"
+
+  pre-stop:
+    - echo "Creating pre-deployment backup..."
+    - bash scripts/backup.sh pre-deployment
+
+  post-stop:
+    - echo "Services stopped"
+
+# Retention - how many old images to keep
+retain_containers: 3

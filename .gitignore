@@ -1,0 +1,380 @@
+##############################################################################
+# SECURE HOMELAB - Git Ignore Configuration
+# Prevents sensitive data from being committed to version control
+##############################################################################
+
+##############################################################################
+# SECRETS & CREDENTIALS (CRITICAL - NEVER COMMIT!)
+##############################################################################
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+!.env.template
+
+# 1Password templates with actual values
+.env.1password
+
+# Secret files
+*secret*.txt
+*password*.txt
+*token*.txt
+*key*.txt
+cf-token
+cf_api_token.txt
+
+# SSH keys
+*.pem
+*.key
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# SSL certificates and private keys (except examples)
+*.crt
+*.key
+*.p12
+*.pfx
+*.pem
+!example.crt
+!example.key
+
+# ACME certificates (Let's Encrypt)
+config/traefik/acme.json
+config/letsencrypt/acme.json
+config/cloudflare/acme.json
+
+# API tokens and credentials
+config/**/credentials*
+config/**/*token*
+config/**/*secret*
+config/**/*password*
+
+##############################################################################
+# CONFIGURATION & STATE
+##############################################################################
+
+# Authelia
+config/authelia/db.sqlite3
+config/authelia/db-backup.sqlite3
+config/authelia/*secret*.txt
+config/authelia/users_database.yml.backup
+
+# CrowdSec
+config/crowdsec/db/
+config/crowdsec/data/
+config/crowdsec/*.db
+
+# Traefik
+config/traefik/logs/*.log
+config/traefik/logs/*.gz
+
+# Tailscale
+config/tailscale/*.state
+config/tailscale/tailscaled.state
+config/tailscale/*.log
+config/tailscale/*.txt
+
+# Grafana
+config/grafana/grafana.db
+config/grafana/grafana-backup.db
+
+# Storage Box credentials
+.storage-box-credentials
+/root/.storage-box-credentials
+
+##############################################################################
+# DOCKER & CONTAINERS
+##############################################################################
+
+# Docker Compose override files
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Docker volumes (data should be in volumes, not git)
+config/*/data/
+config/*/db/
+**/data/
+**/cache/
+
+# Container logs
+logs/
+*.log
+
+##############################################################################
+# BACKUPS & TEMPORARY FILES
+##############################################################################
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+*~
+backups/
+*.tar.gz
+*.zip
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+##############################################################################
+# KAMAL DEPLOYMENT
+##############################################################################
+
+# Kamal state and credentials (but NOT the secrets script itself)
+# The .kamal/secrets file is a SCRIPT that fetches secrets, not actual secrets
+.kamal/*.pem
+.kamal/*.key
+.kamal/secrets-*  # Ignore any actual secret dumps
+
+# Docker registry credentials
+.docker/config.json
+
+##############################################################################
+# OPERATING SYSTEM
+##############################################################################
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+##############################################################################
+# EDITORS & IDEs
+##############################################################################
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
+# Cursor
+.cursor/
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+##############################################################################
+# PACKAGE MANAGERS
+##############################################################################
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+
+# Ruby
+*.gem
+.bundle/
+vendor/bundle/
+Gemfile.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+pip-log.txt
+pip-delete-this-directory.txt
+
+##############################################################################
+# BUILD ARTIFACTS
+##############################################################################
+
+# Compiled files
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.out
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+##############################################################################
+# TESTING
+##############################################################################
+
+# Test coverage
+coverage/
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Test databases
+*.test.db
+test.db
+*.test.sqlite3
+
+##############################################################################
+# MONITORING & METRICS
+##############################################################################
+
+# Prometheus
+config/prometheus/data/
+prometheus-data/
+
+# Grafana
+grafana-data/
+config/grafana/data/
+
+# Loki
+loki-data/
+config/loki/data/
+
+##############################################################################
+# MISC
+##############################################################################
+
+# Compiled binary files
+*.bin
+*.dat
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Database dumps
+*.sql
+*.dump
+
+# Configuration backups
+*.conf.backup
+*.yaml.backup
+*.yml.backup
+
+# PID files
+*.pid
+
+# Lock files
+*.lock
+
+##############################################################################
+# PROJECT SPECIFIC
+##############################################################################
+
+# Old infrastructure (if not yet cleaned up)
+docker-compose-pangolin/
+docker-compose-tailscale/
+old-configs-backup-*/
+
+# Local development overrides
+config/local/
+*.local
+
+# Documentation builds
+docs/_build/
+docs/.doctrees/
+
+# CI/CD artifacts
+.github/workflows/*.log
+
+##############################################################################
+# SECURITY SCANNING
+##############################################################################
+
+# Vulnerability reports
+trivy-results.sarif
+vulnerability-report.txt
+security-scan-*.txt
+
+# Audit logs (sensitive)
+audit-*.log
+access-*.log
+
+##############################################################################
+# ALLOW SPECIFIC FILES
+##############################################################################
+
+# Allow example/template files
+!.env.example
+!.env.template
+!config.example
+!config.template
+!example.yml
+!example.yaml
+
+# Allow documentation
+!README.md
+!CHANGELOG.md
+!LICENSE
+
+# Allow configuration templates
+!config/**/example.*
+!config/**/*.example
+!config/**/*.template
+
+##############################################################################
+# END OF GITIGNORE
+##############################################################################
+

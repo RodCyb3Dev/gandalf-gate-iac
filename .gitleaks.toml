@@ -1,0 +1,207 @@
+# Gitleaks Configuration - Detect hardcoded secrets
+# https://github.com/gitleaks/gitleaks
+
+title = "Homelab Infrastructure Secrets Detection"
+
+[extend]
+useDefault = true
+
+# Allowlist configuration
+[allowlist]
+description = "Global allowlist for false positives"
+
+# Regex patterns to ignore
+regexes = [
+  # Example/placeholder values
+  '''(example\.com|your-domain\.com|localhost|YOUR_SERVER_IP)''',
+  '''(YOUR_|CHANGE_ME|REPLACE_THIS|FIXME|TODO)''',
+  '''(xxx+|yyy+|zzz+|abc123|test123)''',
+  
+  # 1Password references (safe to commit)
+  '''\[use 'op item get''',
+  '''op://[a-zA-Z0-9-]+/[a-zA-Z0-9_-]+''',
+  '''op item (get|create)''',
+  
+  # Known safe IPs
+  '''(0\.0\.0\.0|127\.0\.0\.1|localhost)''',
+  '''192\.168\.[0-9]{1,3}\.[0-9]{1,3}''',
+  '''172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]{1,3}\.[0-9]{1,3}''',
+  '''10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}''',
+  
+  # DNS resolvers
+  '''(1\.1\.1\.1|1\.0\.0\.1|8\.8\.8\.8|8\.8\.4\.4)''',
+  
+  # Environment variable references (safe)
+  '''\$\{[A-Z_]+\}''',
+  '''\$[A-Z_]+''',
+  
+  # Base64 placeholders
+  '''(AKIA|ghp_|ghp_example)example''',
+]
+
+# File paths to ignore
+paths = [
+  '''.*\.md$''',
+  '''.*\.txt$''',
+  '''.*README.*''',
+  '''.*CHECKLIST.*''',
+  '''.*GUIDE.*''',
+  '''.*LICENSE.*''',
+  '''.*/docs/.*''',
+  '''.*/tests?/.*''',
+  '''.*/examples?/.*''',
+  '''.*\.example$''',
+  '''.*\.sample$''',
+  '''.*\.template$''',
+  '''.git/''',
+]
+
+# Specific commit SHAs to ignore (if needed)
+commits = []
+
+# Custom rules for homelab-specific secrets
+[[rules]]
+id = "homelab-cloudflare-api-key"
+description = "Cloudflare API Key"
+regex = '''(?i)(cloudflare|cf)[-_]?(api)?[-_]?key['"]?\s*[:=]\s*['"]?[a-z0-9]{37}'''
+tags = ["cloudflare", "api-key", "secret"]
+
+[[rules]]
+id = "homelab-cloudflare-api-token"
+description = "Cloudflare API Token"
+regex = '''(?i)(cloudflare|cf)[-_]?(api)?[-_]?token['"]?\s*[:=]\s*['"]?[a-zA-Z0-9_-]{40}'''
+tags = ["cloudflare", "api-token", "secret"]
+
+[[rules]]
+id = "homelab-tailscale-auth-key"
+description = "Tailscale Auth Key"
+regex = '''tskey-auth-[a-zA-Z0-9]{48}'''
+tags = ["tailscale", "auth-key", "secret"]
+
+[[rules]]
+id = "homelab-grafana-api-key"
+description = "Grafana API Key"
+regex = '''(?i)grafana[-_]?api[-_]?key['"]?\s*[:=]\s*['"]?eyJrIjoi[a-zA-Z0-9]{60,}'''
+tags = ["grafana", "api-key", "secret"]
+
+[[rules]]
+id = "homelab-jwt-secret"
+description = "JWT Secret"
+regex = '''(?i)jwt[-_]?secret['"]?\s*[:=]\s*['"]?[a-zA-Z0-9+/]{32,}={0,2}['"]?'''
+tags = ["jwt", "secret"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+]
+
+[[rules]]
+id = "homelab-session-secret"
+description = "Session Secret"
+regex = '''(?i)session[-_]?secret['"]?\s*[:=]\s*['"]?[a-zA-Z0-9+/]{32,}={0,2}['"]?'''
+tags = ["session", "secret"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+]
+
+[[rules]]
+id = "homelab-postgres-password"
+description = "PostgreSQL Password"
+regex = '''(?i)(postgres|pg|db)[-_]?password['"]?\s*[:=]\s*['"]?([a-zA-Z0-9!@#$%^&*]{8,})['"]?'''
+tags = ["postgres", "password", "database"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+  '''your_postgres_password''',
+]
+
+[[rules]]
+id = "homelab-redis-password"
+description = "Redis Password"
+regex = '''(?i)redis[-_]?password['"]?\s*[:=]\s*['"]?([a-zA-Z0-9!@#$%^&*]{8,})['"]?'''
+tags = ["redis", "password", "database"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+]
+
+[[rules]]
+id = "homelab-crowdsec-key"
+description = "CrowdSec API Key"
+regex = '''(?i)crowdsec[-_]?(api[-_]?)?key['"]?\s*[:=]\s*['"]?[a-f0-9]{64}'''
+tags = ["crowdsec", "api-key", "security"]
+
+[[rules]]
+id = "homelab-github-token"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+tags = ["github", "token", "secret"]
+
+[[rules]]
+id = "homelab-github-fine-grained-token"
+description = "GitHub Fine-Grained Personal Access Token"
+regex = '''github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}'''
+tags = ["github", "token", "secret"]
+
+[[rules]]
+id = "homelab-docker-registry-password"
+description = "Docker Registry Password"
+regex = '''(?i)(registry|docker)[-_]?password['"]?\s*[:=]\s*['"]?(dckr_pat_[a-zA-Z0-9_-]+|[a-zA-Z0-9!@#$%^&*]{20,})['"]?'''
+tags = ["docker", "password", "registry"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+]
+
+[[rules]]
+id = "homelab-private-key"
+description = "Private Key"
+regex = '''-----BEGIN (RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----'''
+tags = ["private-key", "secret"]
+[rules.allowlist]
+regexes = [
+  '''#\s*-----BEGIN''',  # Commented examples
+]
+
+[[rules]]
+id = "homelab-storage-box-password"
+description = "Storage Box Password"
+regex = '''(?i)storage[-_]?box[-_]?password['"]?\s*[:=]\s*['"]?([a-zA-Z0-9!@#$%^&*]{8,})['"]?'''
+tags = ["storage", "password"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+  '''your-storage-box-password''',
+]
+
+[[rules]]
+id = "homelab-aws-access-key"
+description = "AWS Access Key"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["aws", "access-key", "secret"]
+
+[[rules]]
+id = "homelab-generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(api|auth)[-_]?key['"]?\s*[:=]\s*['"]?[a-zA-Z0-9]{32,}['"]?'''
+tags = ["api-key", "secret"]
+[rules.allowlist]
+regexes = [
+  '''\$\{[A-Z_]+\}''',
+  '''op://''',
+  '''\[use 'op item get''',
+  '''xxx+''',
+  '''your-api-key''',
+]

@@ -1,0 +1,144 @@
+##############################################################################
+# PROMETHEUS - Metrics Collection Configuration
+##############################################################################
+
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+  external_labels:
+    cluster: "homelab-hetzner"
+    environment: "production"
+
+# Alertmanager configuration (optional - can be added later)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - 'alertmanager:9093'
+
+# Load alert rules
+rule_files:
+  - "/etc/prometheus/alerts/*.yml"
+
+##############################################################################
+# SCRAPE CONFIGS
+##############################################################################
+scrape_configs:
+  ##########################################################################
+  # PROMETHEUS SELF-MONITORING
+  ##########################################################################
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: "prometheus"
+
+  ##########################################################################
+  # TRAEFIK METRICS
+  ##########################################################################
+  - job_name: "traefik"
+    static_configs:
+      - targets: ["traefik:8080"]
+        labels:
+          service: "traefik"
+    metrics_path: "/metrics"
+
+  ##########################################################################
+  # CROWDSEC METRICS
+  ##########################################################################
+  - job_name: "crowdsec"
+    static_configs:
+      - targets: ["crowdsec:6060"]
+        labels:
+          service: "crowdsec"
+    metrics_path: "/metrics"
+
+  ##########################################################################
+  # AUTHELIA METRICS
+  ##########################################################################
+  - job_name: "authelia"
+    static_configs:
+      - targets: ["authelia:9959"]
+        labels:
+          service: "authelia"
+
+  ##########################################################################
+  # NODE EXPORTER (System Metrics)
+  ##########################################################################
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: "node-exporter"
+          instance: "hetzner-cx22"
+
+  ##########################################################################
+  # CADVISOR (Container Metrics)
+  ##########################################################################
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: "cadvisor"
+    metrics_path: "/metrics"
+
+  ##########################################################################
+  # DOCKER CONTAINERS (via Docker Daemon)
+  ##########################################################################
+  - job_name: "docker"
+    static_configs:
+      - targets: ["172.20.0.1:9323"]
+        labels:
+          service: "docker-daemon"
+
+  ##########################################################################
+  # GRAFANA METRICS
+  ##########################################################################
+  - job_name: "grafana"
+    static_configs:
+      - targets: ["grafana:3000"]
+        labels:
+          service: "grafana"
+    metrics_path: "/metrics"
+
+  ##########################################################################
+  # LOKI METRICS
+  ##########################################################################
+  - job_name: "loki"
+    static_configs:
+      - targets: ["loki:3100"]
+        labels:
+          service: "loki"
+    metrics_path: "/metrics"
+
+  ##########################################################################
+  # BLACKBOX EXPORTER (HTTP/TCP Probes - Optional)
+  ##########################################################################
+  # - job_name: 'blackbox'
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]
+  #   static_configs:
+  #     - targets:
+  #         - https://grafana.rodneyops.com
+  #         - https://traefik.rodneyops.com
+  #         - https://auth.rodneyops.com
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox-exporter:9115
+
+##############################################################################
+# REMOTE WRITE (for long-term storage - Optional)
+##############################################################################
+# remote_write:
+#   - url: 'http://victoriametrics:8428/api/v1/write'
+#     queue_config:
+#       max_shards: 1
+#       max_samples_per_send: 500
+#       batch_send_deadline: 5s
+

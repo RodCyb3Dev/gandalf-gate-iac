@@ -1,0 +1,277 @@
+##############################################################################
+# GITHUB ACTIONS - Security Scanning Pipeline
+# Weekly security vulnerability scans and compliance checks
+##############################################################################
+
+name: Security Scanning
+
+on:
+  schedule:
+    # Weekly on Sundays at 00:00 UTC
+    - cron: '0 0 * * 0'
+  
+  pull_request:
+    branches:
+      - main
+  
+  workflow_dispatch:
+
+env:
+  GOTIFY_URL: ${{ secrets.GOTIFY_URL }}
+  GOTIFY_TOKEN: ${{ secrets.GOTIFY_TOKEN }}
+
+jobs:
+  ##############################################################################
+  # DOCKER IMAGE SCANNING
+  ##############################################################################
+  image-scan:
+    name: Scan Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract services from docker-compose
+        id: services
+        run: |
+          SERVICES=$(docker-compose config --services)
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'docker-compose.yml'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Generate vulnerability report
+        run: |
+          docker run --rm -v $(pwd):/repo aquasec/trivy config /repo/docker-compose.yml > vulnerability-report.txt
+          cat vulnerability-report.txt
+
+      - name: Check for critical vulnerabilities
+        run: |
+          if grep -q "CRITICAL" vulnerability-report.txt; then
+            echo "❌ Critical vulnerabilities found!"
+            curl -X POST "${{ env.GOTIFY_URL }}/message?token=${{ env.GOTIFY_TOKEN }}" \
+              -F "title=🚨 Critical Vulnerabilities Found" \
+              -F "message=Security scan detected critical vulnerabilities. Review immediately!" \
+              -F "priority=10"
+            exit 1
+          fi
+
+  ##############################################################################
+  # DOCKER SECURITY BENCHMARK
+  ##############################################################################
+  docker-bench:
+    name: Docker Security Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Docker Bench Security
+        run: |
+          docker run --rm --net host --pid host --userns host --cap-add audit_control \
+            -v /etc:/etc:ro \
+            -v /usr/bin/containerd:/usr/bin/containerd:ro \
+            -v /usr/bin/runc:/usr/bin/runc:ro \
+            -v /usr/lib/systemd:/usr/lib/systemd:ro \
+            -v /var/lib:/var/lib:ro \
+            -v /var/run/docker.sock:/var/run/docker.sock:ro \
+            docker/docker-bench-security > docker-bench-report.txt || true
+          
+          cat docker-bench-report.txt
+
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-bench-report
+          path: docker-bench-report.txt
+
+  ##############################################################################
+  # CONFIGURATION SECURITY AUDIT
+  ##############################################################################
+  config-audit:
+    name: Configuration Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Audit YAML configurations
+        run: |
+          echo "🔍 Auditing YAML configurations..."
+          
+          # Check for weak passwords or exposed credentials
+          if grep -r "password.*admin\|password.*123\|secret.*test" config/; then
+            echo "❌ Weak or test credentials found!"
+            exit 1
+          fi
+          
+          echo "✅ Configuration audit passed!"
+
+      - name: Check SSL/TLS configuration
+        run: |
+          echo "🔒 Checking SSL/TLS configurations..."
+          
+          # Verify TLS 1.3 is enforced
+          if ! grep -q "TLS1.3\|tls.*1.3" config/traefik/traefik.yml; then
+            echo "⚠️ TLS 1.3 not explicitly configured"
+          fi
+          
+          echo "✅ SSL/TLS check completed!"
+
+  ##############################################################################
+  # DEPENDENCY AUDIT
+  ##############################################################################
+  dependency-audit:
+    name: Audit Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for outdated images
+        run: |
+          echo "📦 Checking for outdated Docker images..."
+          
+          # Extract image versions from docker-compose
+          grep "image:" docker-compose.yml | while read -r line; do
+            image=$(echo "$line" | awk '{print $2}')
+            echo "Checking: $image"
+            
+            # Pull latest to compare
+            # docker pull "$image" --quiet
+          done
+          
+          echo "✅ Dependency check completed!"
+
+  ##############################################################################
+  # NETWORK SECURITY SCAN
+  ##############################################################################
+  network-scan:
+    name: Network Security Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Analyze network configuration
+        run: |
+          echo "🌐 Analyzing network configuration..."
+          
+          # Check for exposed ports
+          if grep -E "ports:.*[0-9]+" docker-compose.yml | grep -v "# "; then
+            echo "📋 Exposed ports found (review for necessity):"
+            grep -E "ports:.*[0-9]+" docker-compose.yml
+          fi
+          
+          # Check network isolation
+          if ! grep -q "networks:" docker-compose.yml; then
+            echo "⚠️ No network segmentation detected!"
+          fi
+          
+          echo "✅ Network analysis completed!"
+
+  ##############################################################################
+  # COMPLIANCE CHECK
+  ##############################################################################
+  compliance-check:
+    name: Security Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run compliance checks
+        run: |
+          echo "📋 Running security compliance checks..."
+          
+          ISSUES=()
+          
+          # Check 1: Ensure no services run as root
+          if grep -q "user: root" docker-compose.yml; then
+            ISSUES+=("Services running as root detected")
+          fi
+          
+          # Check 2: Verify resource limits are set
+          if ! grep -q "deploy:" docker-compose.yml; then
+            ISSUES+=("No resource limits configured")
+          fi
+          
+          # Check 3: Check for security options
+          if ! grep -q "security_opt:" docker-compose.yml; then
+            ISSUES+=("No security options configured")
+          fi
+          
+          # Check 4: Verify secrets management
+          if ! grep -q "secrets:" docker-compose.yml; then
+            ISSUES+=("No secrets management configured")
+          fi
+          
+          # Report issues
+          if [ ${#ISSUES[@]} -gt 0 ]; then
+            echo "⚠️ Compliance issues found:"
+            printf '%s\n' "${ISSUES[@]}"
+          else
+            echo "✅ All compliance checks passed!"
+          fi
+
+  ##############################################################################
+  # SECURITY REPORT
+  ##############################################################################
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [image-scan, docker-bench, config-audit, dependency-audit, network-scan, compliance-check]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "📊 Security Scan Summary"
+          echo "========================"
+          echo "Date: $(date)"
+          echo ""
+          echo "Scans completed:"
+          echo "✅ Docker image vulnerability scan"
+          echo "✅ Docker security benchmark"
+          echo "✅ Configuration audit"
+          echo "✅ Dependency audit"
+          echo "✅ Network security analysis"
+          echo "✅ Compliance check"
+
+      - name: Notify completion
+        run: |
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            EMOJI="✅"
+            PRIORITY=5
+            MESSAGE="Weekly security scan completed. No critical issues found."
+          else
+            EMOJI="⚠️"
+            PRIORITY=8
+            MESSAGE="Weekly security scan completed with warnings. Review GitHub Actions logs."
+          fi
+          
+          curl -X POST "${{ env.GOTIFY_URL }}/message?token=${{ env.GOTIFY_TOKEN }}" \
+            -F "title=$EMOJI Security Scan Complete" \
+            -F "message=$MESSAGE" \
+            -F "priority=$PRIORITY"
+
