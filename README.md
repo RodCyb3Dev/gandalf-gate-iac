@@ -249,7 +249,7 @@ docker exec crowdsec cscli bouncers add traefik-bouncer
 
 ### Hetzner Storage Box
 
-The Storage Box is mounted at `/mnt/storagebox` via WebDAV (HTTPS) and provides network storage for media files and backups.
+The Storage Box is mounted at `/mnt/storagebox` via WebDAV (HTTPS) and provides network storage for media files and backups. The Storage Box has been upgraded to **5TB capacity** (upgrade may take 15-30 minutes to fully propagate).
 
 **Directory Structure:**
 
