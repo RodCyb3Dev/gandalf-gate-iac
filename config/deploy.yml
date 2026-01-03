@@ -1,45 +1,76 @@
 # Kamal deployment configuration for secure homelab
 # Zero-downtime deployments using Docker images
+# Documentation: https://kamal-deploy.org/docs/configuration/overview/
 
+# =============================================================================
+# ANCHORS (Reusable configuration)
+# =============================================================================
+# Documentation: https://kamal-deploy.org/docs/configuration/anchors/
+x-common-env: &common-env
+  TZ: Europe/Helsinki
+  DOMAIN: rodneyops.com
+  PUID: "1000"
+  PGID: "1000"
+  SMTP_HOST: smtp.protonmail.ch
+  SMTP_PORT: "587"
+  VPN_PROVIDER: protonvpn
+  VPN_ADDRESSES: 10.2.0.2/32
+  VPN_COUNTRIES: Netherlands
+  TAILSCALE_DOMAIN: kooka-lake.ts.net
+  JELLYFIN_PUBLISHED_URL: https://jellyfin.kooka-lake.ts.net
+  GRAFANA_ADMIN_USER: admin
+  GOTIFY_ADMIN_USER: admin
+  KAMAL_REGISTRY: ghcr.io
+
+# =============================================================================
+# SERVICE CONFIGURATION
+# =============================================================================
 service: homelab
-image: ghcr.io/rodcyb3dev/homelab
+# Container image (GitHub Container Registry)
+# Note: Kamal prepends the registry server, so don't include ghcr.io/ here
+image: rodcyb3dev/homelab
 
-# Servers to deploy to
+# =============================================================================
+# SERVERS
+# =============================================================================
+# Documentation: https://kamal-deploy.org/docs/configuration/servers/
+# Servers should only have IP addresses or hostnames
+# Disable Kamal proxy since we're using Traefik
 servers:
   web:
     hosts:
       - 95.216.176.147
-    labels:
-      traefik.enable: true
-      traefik.http.routers.homelab.rule: Host(`rodneyops.com`)
-      traefik.http.routers.homelab.tls: true
-    options:
-      network: public
+    proxy: false
 
-# Docker registry configuration
+# =============================================================================
+# PROXY CONFIGURATION
+# =============================================================================
+# Documentation: https://kamal-deploy.org/docs/configuration/proxy/
+# Kamal proxy provides gapless deployments on ports 80 and 443
+# Since we're using Traefik, we disable Kamal's proxy
+proxy:
+  ssl: true
+  host: rodneyops.com
+  app_port: 80
+  # Disable Kamal proxy since we're using Traefik
+  # The proxy will be disabled on the server role below
+
+# =============================================================================
+# DOCKER REGISTRY CONFIGURATION
+# =============================================================================
+# Documentation: https://kamal-deploy.org/docs/configuration/docker-registry/
 registry:
   server: ghcr.io
   username: RodCyb3Dev
   password:
     - KAMAL_REGISTRY_PASSWORD
 
-# Environment variables
+# =============================================================================
+# ENVIRONMENT VARIABLES
+# =============================================================================
 env:
   clear:
-    TZ: Europe/Helsinki
-    DOMAIN: rodneyops.com
-    PUID: "1000"
-    PGID: "1000"
-    SMTP_HOST: smtp.protonmail.ch
-    SMTP_PORT: "587"
-    VPN_PROVIDER: protonvpn
-    VPN_ADDRESSES: 10.2.0.2/32
-    VPN_COUNTRIES: Netherlands
-    TAILSCALE_DOMAIN: kooka-lake.ts.net
-    JELLYFIN_PUBLISHED_URL: https://jellyfin.kooka-lake.ts.net
-    GRAFANA_ADMIN_USER: admin
-    GOTIFY_ADMIN_USER: admin
-    KAMAL_REGISTRY: ghcr.io
+    <<: *common-env
   secret:
     - STORAGE_BOX_PASSWORD
     - CF_API_TOKEN
@@ -55,17 +86,23 @@ env:
     - GOTIFY_ADMIN_PASSWORD
     - VPN_PRIVATE_KEY
 
-# SSH configuration
+# =============================================================================
+# SSH CONFIGURATION
+# =============================================================================
 ssh:
   user: root
   port: 22
 
-# Builder configuration
+# =============================================================================
+# BUILDER CONFIGURATION
+# =============================================================================
 builder:
   arch: amd64
-  multiarch: false
 
-# Accessories (supporting services that don't change often)
+# =============================================================================
+# ACCESSORIES (Supporting services)
+# =============================================================================
+# Documentation: https://kamal-deploy.org/docs/configuration/accessories/
 accessories:
   db:
     image: postgres:15-alpine
@@ -78,71 +115,12 @@ accessories:
         - POSTGRES_PASSWORD
     directories:
       - data:/var/lib/postgresql/data
-    options:
-      network: private
 
-# Volumes to preserve across deployments
+# =============================================================================
+# VOLUMES
+# =============================================================================
 volumes:
   - config:/opt/homelab/config
   - prometheus-data:/opt/homelab/prometheus-data
   - grafana-data:/opt/homelab/grafana-data
   - loki-data:/opt/homelab/loki-data
-
-# Healthcheck
-healthcheck:
-  path: /health
-  port: 8080
-  max_attempts: 7
-  interval: 10s
-
-# Asset bridge for static files
-#asset_path: /opt/homelab/public
-
-# Traefik reverse proxy labels
-traefik:
-  options:
-    publish:
-      - 443:443
-      - 80:80
-    network: public
-  args:
-    entryPoints.web.address: ":80"
-    entryPoints.websecure.address: ":443"
-    entryPoints.websecure.http.tls: true
-
-# Backup before deployment
-backup:
-  enabled: true
-  schedule: "0 3 * * *"
-
-# Rollback configuration
-rollback:
-  enabled: true
-  keep_images: 3
-
-# Hooks - run scripts at different deployment stages
-hooks:
-  pre-connect:
-    - echo "Connecting to server..."
-
-  pre-build:
-    - echo "Building Docker image..."
-
-  pre-deploy:
-    - echo "Running pre-deployment health check..."
-    - bash scripts/health-check.sh
-
-  post-deploy:
-    - echo "Running post-deployment verification..."
-    - docker exec traefik traefik healthcheck
-    - echo "Deployment completed successfully!"
-
-  pre-stop:
-    - echo "Creating pre-deployment backup..."
-    - bash scripts/backup.sh pre-deployment
-
-  post-stop:
-    - echo "Services stopped"
-
-# Retention - how many old images to keep
-retain_containers: 3
