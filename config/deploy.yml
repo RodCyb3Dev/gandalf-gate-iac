@@ -69,7 +69,7 @@ builder:
 accessories:
   db:
     image: postgres:15-alpine
-    host: YOUR_HETZNER_IP
+    host: 95.216.176.147
     port: 5432
     env:
       clear:
