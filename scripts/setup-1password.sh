@@ -186,7 +186,7 @@ TAILSCALE_DOMAIN=kooka-lake.ts.net
 
 # CrowdSec
 CROWDSEC_ENROLL_KEY=op://homelab/crowdsec/enroll-key
-CROWDSEC_BOUNCER_API_KEY=op://homelab/crowdsec/bouncer-api-key
+CROWDSEC_BOUNCER_KEY=op://homelab/crowdsec/bouncer-api-key
 
 # Authelia
 AUTHELIA_JWT_SECRET=op://homelab/authelia/jwt-secret

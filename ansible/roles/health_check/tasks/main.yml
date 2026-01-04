@@ -9,7 +9,7 @@
   tags: health_check
 
 - name: Check critical services are running
-  command: docker-compose ps --filter "status=running" --format "{{ '{{.Name}}' }}"
+  command: docker compose ps --filter "status=running" --format "{{ '{{.Name}}' }}"
   args:
     chdir: "{{ deploy_path }}"
   register: running_services

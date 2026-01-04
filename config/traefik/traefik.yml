@@ -64,10 +64,9 @@ entryPoints:
           - main: "rodneyops.com"
             sans:
               - "*.rodneyops.com"
-      middlewares:
-        - crowdsec-bouncer@docker
-        - security-headers@file
-        - rate-limit@file
+      # Note: File provider middlewares (security-headers, rate-limit) 
+      # cannot be applied at entryPoint level. They are applied at router level
+      # via dynamic/routers.yml or Docker labels.
     # Forward real IP from Cloudflare
     forwardedHeaders:
       trustedIPs:
@@ -97,9 +96,10 @@ entryPoints:
 certificatesResolvers:
   cloudflare:
     acme:
-      email: "rodney@kodeflash.dev"
-      storage: "/acme.json"
-      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+      # caServer: https://acme-v02.api.letsencrypt.org/directory # production (default)
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory # staging (testing)
+      email: edward.bezrukov@pm.me
+      storage: acme.json
       # Use DNS-01 challenge with Cloudflare
       dnsChallenge:
         provider: cloudflare
@@ -183,13 +183,15 @@ metrics:
 
 ##############################################################################
 # Experimental Features
+# NOTE: In Traefik v3, experimental section has been removed.
+# Plugins are now handled via the plugin system if needed.
 ##############################################################################
-experimental:
-  plugins:
-    # CrowdSec bouncer plugin (if using plugin version)
-    # crowdsec-bouncer-traefik-plugin:
-    #   moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
-    #   version: "v1.3.0"
+# experimental:
+#   plugins:
+#     # CrowdSec bouncer plugin (if using plugin version)
+#     # crowdsec-bouncer-traefik-plugin:
+#     #   moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+#     #   version: "v1.3.0"
 
 ##############################################################################
 # Ping (Health Check)

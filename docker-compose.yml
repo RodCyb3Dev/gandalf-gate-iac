@@ -94,8 +94,8 @@ services:
       - "443:443"
       - "8080:8080" # Dashboard (restricted by IP whitelist)
     environment:
-      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_api_token
       - TZ=${TZ:-UTC}
+      # CF_DNS_API_TOKEN_FILE not needed for HTTP-01 challenge
     secrets:
       - cf_api_token
     volumes:
@@ -141,9 +141,10 @@ services:
     environment:
       - COLLECTIONS=crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/whitelist-good-actors crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
       - GID=1000
-      - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
-      - ENROLL_INSTANCE_NAME=homelab-hetzner
-      - ENROLL_TAGS=docker,hetzner,production
+      # CAPI enrollment - set ENROLL_KEY only if you want to enroll with Central API
+      # - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
+      # - ENROLL_INSTANCE_NAME=homelab-hetzner
+      # - ENROLL_TAGS=docker,hetzner,production
     volumes:
       - ./config/crowdsec:/etc/crowdsec
       - crowdsec-db:/var/lib/crowdsec/data
@@ -169,7 +170,7 @@ services:
     networks:
       - security
     environment:
-      - CROWDSEC_BOUNCER_API_KEY=${CROWDSEC_BOUNCER_API_KEY}
+      - CROWDSEC_BOUNCER_API_KEY=${CROWDSEC_BOUNCER_KEY}
       - CROWDSEC_AGENT_HOST=crowdsec:8080
       - GIN_MODE=release
     depends_on:
@@ -193,9 +194,8 @@ services:
       - public
     environment:
       - TZ=${TZ:-UTC}
-      - AUTHELIA_JWT_SECRET_FILE=/run/secrets/authelia_jwt_secret
-      - AUTHELIA_SESSION_SECRET_FILE=/run/secrets/authelia_session_secret
-      - AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE=/run/secrets/authelia_storage_encryption_key
+      # Secrets are loaded via file:// references in configuration.yml
+      # No need to set AUTHELIA_*_FILE environment variables
     secrets:
       - authelia_jwt_secret
       - authelia_session_secret
@@ -717,7 +717,7 @@ services:
   ##############################################################################
 
   readarr:
-    image: lscr.io/linuxserver/readarr:develop
+    image: lscr.io/linuxserver/readarr:latest
     container_name: readarr
     restart: unless-stopped
     network_mode: "service:gluetun"

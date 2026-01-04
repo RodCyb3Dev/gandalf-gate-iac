@@ -68,6 +68,14 @@
     COMPOSE_FILE: "{{ deploy_path }}/{{ docker_compose_file }}"
   loop: "{{ services_list.stdout_lines }}"
   register: deploy_result
+  failed_when: false  # Continue even if some services fail (e.g., storage box mount issues)
+  tags: deploy_services
+
+- name: Display deployment failures
+  debug:
+    msg: "Service {{ item.item }} failed to deploy: {{ item.stderr_lines | default([]) | select('match', '.*error.*|.*fail.*') | list }}"
+  loop: "{{ deploy_result.results | default([]) }}"
+  when: item.rc != 0
   tags: deploy_services
 
 - name: Wait for services to start

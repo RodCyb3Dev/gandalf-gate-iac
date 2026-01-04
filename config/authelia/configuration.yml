@@ -86,6 +86,13 @@ authentication_backend:
 
   refresh_interval: "5m"
 
+##############################################################################
+# IDENTITY VALIDATION (JWT Secret for Password Reset)
+##############################################################################
+identity_validation:
+  reset_password:
+    jwt_secret: "file:///run/secrets/authelia_jwt_secret"
+
   # File-based user database (for simplicity)
   file:
     path: "/config/users_database.yml"
@@ -168,15 +175,14 @@ access_control:
         - "^/api/health$"
         - "^/api/state$"
 
-    # Admin services - require 2FA
+    # Admin services - require 2FA (Traefik dashboard only, Portainer is Tailscale-only)
     - domain:
         - "traefik.rodneyops.com"
-        - "portainer.rodneyops.com"
       policy: "two_factor"
       subject:
         - ["group:admins"]
 
-    # Monitoring - require authentication
+    # Monitoring services - require 2FA
     - domain:
         - "grafana.rodneyops.com"
         - "status.rodneyops.com"
@@ -185,6 +191,12 @@ access_control:
     # Notifications - require authentication
     - domain:
         - "rodify.rodneyops.com"
+      policy: "one_factor"
+
+    # Media services - require authentication
+    - domain:
+        - "navidrome.rodneyops.com"
+        - "audiobooks.rodneyops.com"
       policy: "one_factor"
 
     # Allow from internal networks without auth (optional)

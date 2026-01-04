@@ -143,30 +143,40 @@ Authelia SSO + 2FA (Layer 4)
 
 ## 📦 Services
 
-### Public Services (via Traefik + Authelia)
+### Services Exposed Through Traefik (Protected by Authelia)
 
-| Service           | URL                     | Purpose                  | Auth               |
-| ----------------- | ----------------------- | ------------------------ | ------------------ |
-| Traefik Dashboard | `traefik.rodneyops.com` | Reverse proxy monitoring | 2FA + IP whitelist |
-| Grafana           | `grafana.rodneyops.com` | Metrics & dashboards     | 2FA                |
-| Gotify            | `rodify.rodneyops.com`  | Push notifications       | Password           |
-| Uptime Kuma       | `status.rodneyops.com`  | Service status page      | 2FA                |
-| Authelia          | `auth.rodneyops.com`    | SSO authentication       | Password + 2FA     |
+These services are accessible via HTTPS through Traefik reverse proxy and protected by Authelia SSO:
 
-### Private Services (Tailscale-only)
+| Service           | URL                           | Purpose                  | Authentication     |
+| ----------------- | ----------------------------- | ------------------------ | ------------------ |
+| Traefik Dashboard | `https://traefik.rodneyops.com` | Reverse proxy monitoring | 2FA (Admins only)  |
+| Authelia          | `https://auth.rodneyops.com`    | SSO authentication       | Password + 2FA     |
+| Grafana           | `https://grafana.rodneyops.com` | Metrics & dashboards     | 2FA                |
+| Uptime Kuma       | `https://status.rodneyops.com`  | Service status page      | 2FA                |
+| Gotify            | `https://rodify.rodneyops.com`  | Push notifications       | 1FA                |
+| Navidrome         | `https://navidrome.rodneyops.com` | Music streaming server  | 1FA                |
+| Audiobookshelf    | `https://audiobooks.rodneyops.com` | Audiobook & podcast server | 1FA            |
 
-| Service     | Internal Port | Purpose              |
-| ----------- | ------------- | -------------------- |
-| Jellyfin    | 8096          | Media streaming      |
-| Sonarr      | 8989          | TV show management   |
-| Radarr      | 7878          | Movie management     |
-| Prowlarr    | 9696          | Indexer management   |
-| qBittorrent | 8085          | Torrent client       |
-| Lidarr      | 8686          | Music management     |
-| Readarr     | 8787          | Book management      |
-| Bazarr      | 6767          | Subtitle management  |
-| Homarr      | 7575          | Service dashboard    |
-| Portainer   | 9000          | Container management |
+**Note:** All services above require Authelia authentication. Health check endpoints are bypassed for monitoring.
+
+### Services on Tailscale Only (Not in Authelia Config)
+
+These services are only accessible via Tailscale VPN and are not exposed through Traefik:
+
+| Service     | Tailscale URL                          | Purpose              |
+| ----------- | -------------------------------------- | -------------------- |
+| Jellyfin    | `https://jellyfin.kooka-lake.ts.net`   | Media streaming      |
+| Jellyseerr   | `https://jellyseerr.kooka-lake.ts.net` | Media request management |
+| Sonarr      | `https://sonarr.kooka-lake.ts.net`     | TV show management   |
+| Radarr      | `https://radarr.kooka-lake.ts.net`     | Movie management     |
+| Prowlarr    | `https://prowlarr.kooka-lake.ts.net`   | Indexer management   |
+| qBittorrent | `https://qbittorrent.kooka-lake.ts.net` | Torrent client       |
+| Lidarr      | `https://lidarr.kooka-lake.ts.net`     | Music management     |
+| Readarr     | `https://readarr.kooka-lake.ts.net`    | Book management      |
+| Bazarr      | `https://bazarr.kooka-lake.ts.net`     | Subtitle management  |
+| Flaresolverr| `https://flaresolverr.kooka-lake.ts.net` | Cloudflare bypass proxy |
+| Homarr      | `https://homarr.kooka-lake.ts.net`     | Service dashboard    |
+| Portainer   | `https://portainer.kooka-lake.ts.net`  | Container management |
 
 ### Security Services
 
@@ -211,7 +221,7 @@ GRAFANA_ADMIN_PASSWORD=secure_password
 
 # CrowdSec
 CROWDSEC_ENROLL_KEY=your_key
-CROWDSEC_BOUNCER_API_KEY=your_api_key
+CROWDSEC_BOUNCER_KEY=your_api_key
 
 # Tailscale
 TAILSCALE_AUTH_KEY=tskey-auth-xxxxx
