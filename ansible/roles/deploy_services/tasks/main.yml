@@ -4,31 +4,51 @@
 ##############################################################################
 
 ---
-- name: Check if docker-compose is installed
-  command: docker-compose version
-  register: docker_compose_check
+- name: Check if docker compose (v2) is available
+  command: docker compose version
+  register: docker_compose_v2_check
   changed_when: false
   failed_when: false
   tags: deploy_services
 
-- name: Fail if docker-compose is not installed
+- name: Check if docker-compose (v1) is available
+  command: docker-compose version
+  register: docker_compose_v1_check
+  changed_when: false
+  failed_when: false
+  when: docker_compose_v2_check.rc != 0
+  tags: deploy_services
+
+- name: Set docker compose command
+  set_fact:
+    docker_compose_cmd: "{{ 'docker compose' if docker_compose_v2_check.rc == 0 else 'docker-compose' }}"
+  tags: deploy_services
+
+- name: Fail if neither docker compose nor docker-compose is available
   fail:
-    msg: "docker-compose is not installed. Please install it first."
-  when: docker_compose_check.rc != 0
+    msg: "Neither 'docker compose' (v2) nor 'docker-compose' (v1) is installed. Please install Docker Compose first."
+  when: docker_compose_v2_check.rc != 0 and docker_compose_v1_check.rc != 0
   tags: deploy_services
 
 - name: Pull latest Docker images
-  command: docker-compose pull
+  command: "{{ docker_compose_cmd }} pull"
   args:
     chdir: "{{ deploy_path }}"
   environment:
     COMPOSE_FILE: "{{ deploy_path }}/{{ docker_compose_file }}"
   register: pull_result
   changed_when: "'up to date' not in pull_result.stdout"
+  failed_when: false  # Continue even if some images fail to pull (may not have amd64)
   tags: deploy_services
 
-- name: Get list of services from docker-compose
-  command: docker-compose config --services
+- name: Display pull warnings
+  debug:
+    msg: "{{ pull_result.stderr_lines | select('match', '.*manifest.*') | list }}"
+  when: pull_result.stderr is defined and pull_result.stderr != ""
+  tags: deploy_services
+
+- name: Get list of services from docker compose
+  command: "{{ docker_compose_cmd }} config --services"
   args:
     chdir: "{{ deploy_path }}"
   register: services_list
@@ -41,7 +61,7 @@
   tags: deploy_services
 
 - name: Deploy services with rolling update
-  command: docker-compose up -d --remove-orphans --force-recreate {{ item }}
+  command: "{{ docker_compose_cmd }} up -d --remove-orphans --force-recreate {{ item }}"
   args:
     chdir: "{{ deploy_path }}"
   environment:
@@ -56,7 +76,7 @@
   tags: deploy_services
 
 - name: Verify services are running
-  command: docker-compose ps
+  command: "{{ docker_compose_cmd }} ps"
   args:
     chdir: "{{ deploy_path }}"
   register: services_status

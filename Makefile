@@ -170,27 +170,27 @@ ansible-check: ## Check Ansible syntax
 	@cd ansible && ansible-playbook --syntax-check playbook.yml
 	@cd ansible && ansible-inventory --list
 
-ansible-deploy: ## Deploy with Ansible (requires environment variables)
+ansible-deploy: ## Deploy with Ansible (loads .env automatically)
 	@echo "Deploying with Ansible..."
-	@cd ansible && ansible-playbook playbook.yml -v
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbook.yml -v
 
 ansible-deploy-check: ## Dry run deployment (check mode)
-	@cd ansible && ansible-playbook playbook.yml --check
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbook.yml --check
 
 ansible-deploy-tags: ## Deploy specific tags (usage: make ansible-deploy-tags TAGS=sync_config,deploy_services)
-	@cd ansible && ansible-playbook playbook.yml --tags $(TAGS)
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbook.yml --tags $(TAGS)
 
 ansible-vault-create: ## Create Ansible vault file
-	@cd ansible && ansible-vault create vault.yml
+	@set -a && . .env && set +a && cd ansible && ansible-vault create vault.yml
 
 ansible-vault-edit: ## Edit Ansible vault file
-	@cd ansible && ansible-vault edit vault.yml
+	@set -a && . .env && set +a && cd ansible && ansible-vault edit vault.yml
 
 ansible-vault-view: ## View Ansible vault file
-	@cd ansible && ansible-vault view vault.yml
+	@set -a && . .env && set +a && cd ansible && ansible-vault view vault.yml
 
 ansible-ping: ## Test Ansible connection to server
-	@cd ansible && ansible all -m ping
+	@set -a && . .env && set +a && cd ansible && ansible all -m ping
 
 ##############################################################################
 # QA & Security Checks

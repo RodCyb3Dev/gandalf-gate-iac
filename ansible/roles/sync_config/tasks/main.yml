@@ -33,9 +33,23 @@
     src: "{{ playbook_dir }}/../docker-compose.yml"
     dest: "{{ deploy_path }}/docker-compose.yml"
     mode: push
+    perms: yes
+  tags: sync_config
+
+- name: Set ownership of docker-compose.yml
+  file:
+    path: "{{ deploy_path }}/docker-compose.yml"
     owner: deploy
     group: deploy
-    perms: yes
+    mode: '0644'
+  tags: sync_config
+
+- name: Set ownership of config directory
+  file:
+    path: "{{ deploy_path }}/config"
+    owner: deploy
+    group: deploy
+    recurse: yes
   tags: sync_config
 
 - name: Sync configuration files (excluding secrets and runtime data)
@@ -43,8 +57,6 @@
     src: "{{ playbook_dir }}/../config/"
     dest: "{{ deploy_path }}/config/"
     mode: push
-    owner: deploy
-    group: deploy
     perms: yes
     rsync_opts:
       - "--exclude=*.log"

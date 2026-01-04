@@ -23,6 +23,8 @@
       GOTIFY_ADMIN_USER: "{{ lookup('env', 'GOTIFY_ADMIN_USER') | default(vault_gotify_admin_user | default('admin')) }}"
       GOTIFY_ADMIN_PASSWORD: "{{ lookup('env', 'GOTIFY_ADMIN_PASSWORD') | default(vault_gotify_admin_password | default('')) }}"
       TS_AUTHKEY: "{{ lookup('env', 'TS_AUTHKEY') | default(vault_tailscale_auth_key | default('')) }}"
+      TAILSCALE_DOMAIN: "{{ tailscale_domain | default(vault_tailscale_domain | default('kooka-lake.ts.net')) }}"
+      TAILSCALE_AUTH_KEY: "{{ lookup('env', 'TS_AUTHKEY') | default(vault_tailscale_auth_key | default('')) }}"
       CF_API_TOKEN: "{{ lookup('env', 'CF_API_TOKEN') | default(vault_cf_api_token | default('')) }}"
       CF_API_EMAIL: "{{ lookup('env', 'CF_API_EMAIL') | default(vault_cf_api_email | default('')) }}"
       LE_EMAIL_SSL: "{{ lookup('env', 'LE_EMAIL_SSL') | default(vault_le_email_ssl | default('')) }}"

@@ -12,6 +12,27 @@
         }
       }
     },
+    "jellyseerr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:5055"
+        }
+      }
+    },
+    "homarr.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7575"
+        }
+      }
+    },
+    "portainer.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:9000"
+        }
+      }
+    },
     "sonarr.kooka-lake.ts.net:443": {
       "Handlers": {
         "/": {
@@ -67,27 +88,20 @@
           "Proxy": "http://gluetun:8085"
         }
       }
-    },
-    "homarr.kooka-lake.ts.net:443": {
-      "Handlers": {
-        "/": {
-          "Proxy": "http://127.0.0.1:7575"
-        }
-      }
-    },
-    "portainer.kooka-lake.ts.net:443": {
-      "Handlers": {
-        "/": {
-          "Proxy": "http://127.0.0.1:9000"
-        }
-      }
-    },
-    "jellyseerr.kooka-lake.ts.net:443": {
-      "Handlers": {
-        "/": {
-          "Proxy": "http://127.0.0.1:5055"
-        }
-      }
     }
+  },
+  "AllowFunnel": {
+    "jellyfin.kooka-lake.ts.net:443": false,
+    "jellyseerr.kooka-lake.ts.net:443": false,
+    "homarr.kooka-lake.ts.net:443": false,
+    "portainer.kooka-lake.ts.net:443": false,
+    "sonarr.kooka-lake.ts.net:443": false,
+    "radarr.kooka-lake.ts.net:443": false,
+    "prowlarr.kooka-lake.ts.net:443": false,
+    "lidarr.kooka-lake.ts.net:443": false,
+    "readarr.kooka-lake.ts.net:443": false,
+    "bazarr.kooka-lake.ts.net:443": false,
+    "flaresolverr.kooka-lake.ts.net:443": false,
+    "qbittorrent.kooka-lake.ts.net:443": false
   }
 }

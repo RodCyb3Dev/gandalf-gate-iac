@@ -9,7 +9,11 @@
   become: yes
   become_user: root
   gather_facts: yes
-
+  
+  # Load vault file - password comes from ANSIBLE_VAULT_PASS env var via vault_password_file
+  vars_files:
+    - vault.yml
+  
   vars:
     deploy_path: "{{ hostvars[inventory_hostname]['deploy_path'] | default('/opt/homelab') }}"
     domain: "{{ hostvars[inventory_hostname]['domain'] | default('rodneyops.com') }}"
@@ -25,7 +29,7 @@
         mode: '0755'
 
     - name: Check disk space
-      command: df -h / | awk 'NR==2 {print $5}' | sed 's/%//'
+      shell: df -h / | awk 'NR==2 {print $5}' | sed 's/%//'
       register: disk_usage
       changed_when: false
       failed_when: disk_usage.stdout | int > 90
