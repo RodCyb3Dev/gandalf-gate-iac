@@ -48,21 +48,22 @@ http:
 
 ##############################################################################
 # TCP ROUTERS (if needed for non-HTTP services)
+# Note: In Traefik v3, tcp section cannot be empty. Uncomment when needed.
 ##############################################################################
-tcp:
-  routers:
-    # Example: SSH passthrough
-    # ssh-router:
-    #   entryPoints:
-    #     - ssh
-    #   rule: "HostSNI(`*`)"
-    #   service: ssh-service
-
-  services:
-    # ssh-service:
-    #   loadBalancer:
-    #     servers:
-    #       - address: "internal-ssh-server:22"
+# tcp:
+#   routers:
+#     # Example: SSH passthrough
+#     # ssh-router:
+#     #   entryPoints:
+#     #     - ssh
+#     #   rule: "HostSNI(`*`)"
+#     #   service: ssh-service
+#
+#   services:
+#     # ssh-service:
+#     #   loadBalancer:
+#     #     servers:
+#     #       - address: "internal-ssh-server:22"
 
 ##############################################################################
 # UDP ROUTERS (if needed for VPN, etc.)
