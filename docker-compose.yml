@@ -39,8 +39,8 @@ volumes:
     driver: local
     driver_opts:
       type: cifs
-      o: "username=u525677,password=${STORAGE_BOX_PASSWORD},vers=3.0,sec=ntlmv2,uid=1000,gid=1000,file_mode=0777,dir_mode=0777"
-      device: "//u525677.your-storagebox.de/backup"
+      o: "username=u526046,password=${STORAGE_BOX_PASSWORD},vers=3.0,sec=ntlmv2,uid=1000,gid=1000,file_mode=0777,dir_mode=0777"
+      device: "//u526046.your-storagebox.de/backup"
 
   # Prometheus time-series database
   prometheus-data:
@@ -571,7 +571,7 @@ services:
       - "7878:7878" # Radarr
       - "8989:8989" # Sonarr
       - "8686:8686" # Lidarr
-      - "8787:8787" # Readarr
+      - "5299:5299" # LazyLibrarian
       - "6767:6767" # Bazarr
       - "8191:8191" # flaresolverr
     environment:
@@ -713,12 +713,12 @@ services:
           cpus: "0.3"
 
   ##############################################################################
-  # PRIVATE SERVICES - Readarr (Books)
+  # PRIVATE SERVICES - LazyLibrarian (Books - Readarr replacement)
   ##############################################################################
 
-  readarr:
-    image: lscr.io/linuxserver/readarr::0.4.19-nightly
-    container_name: readarr
+  lazylibrarian:
+    image: lscr.io/linuxserver/lazylibrarian:latest
+    container_name: lazylibrarian
     restart: unless-stopped
     network_mode: "service:gluetun"
     environment:
@@ -726,7 +726,7 @@ services:
       - PGID=${PGID:-1000}
       - TZ=${TZ:-UTC}
     volumes:
-      - ./config/readarr:/config
+      - ./config/lazylibrarian:/config
       - hetzner-media:/media
     depends_on:
       - gluetun
@@ -734,8 +734,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
-          cpus: "0.3"
+          memory: 256M
+          cpus: "0.5"
 
   ##############################################################################
   # PRIVATE SERVICES - Bazarr (Subtitles)

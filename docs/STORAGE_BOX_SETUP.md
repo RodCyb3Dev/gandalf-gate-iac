@@ -15,8 +15,8 @@ Your homelab uses a Hetzner Storage Box for media storage, providing:
 
 **Storage Box Details:**
 
-- Host: `u525677.your-storagebox.de`
-- Username: `u525677`
+- Host: `u526046.your-storagebox.de`
+- Username: `u526046`
 - SSH Port: 23
 - Protocol: CIFS/SMB
 
@@ -127,7 +127,7 @@ The setup script creates this directory structure:
 Created at: `/root/.smbcredentials`
 
 ```ini
-username=u525677
+username=u526046
 password=YOUR_PASSWORD
 ```
 
@@ -138,7 +138,7 @@ password=YOUR_PASSWORD
 Added to: `/etc/fstab`
 
 ```bash
-//u525677.your-storagebox.de/backup /mnt/storagebox cifs credentials=/root/.smbcredentials,uid=1000,gid=1000,file_mode=0770,dir_mode=0770,_netdev 0 0
+//u526046.your-storagebox.de/backup /mnt/storagebox cifs credentials=/root/.smbcredentials,uid=1000,gid=1000,file_mode=0770,dir_mode=0770,_netdev 0 0
 ```
 
 **Options:**
@@ -157,7 +157,7 @@ Added to: `/etc/fstab`
 
 ```bash
 # Connect to Storage Box directly
-sftp -P 23 u525677@u525677.your-storagebox.de
+sftp -P 23 u526046@u526046.your-storagebox.de
 
 # Navigate and upload
 cd music
@@ -184,7 +184,7 @@ mv /tmp/music/* /mnt/storagebox/music/
 # Initial sync
 rsync -avz --progress -e "ssh -p 23" \
   /path/to/music/ \
-  u525677@u525677.your-storagebox.de:/home/music/
+  u526046@u526046.your-storagebox.de:/home/music/
 
 # Or via server mount
 rsync -avz --progress \
@@ -249,8 +249,8 @@ volumes:
     driver: local
     driver_opts:
       type: cifs
-      o: "username=u525677,password=${STORAGE_BOX_PASSWORD},uid=1000,gid=1000,file_mode=0770,dir_mode=0770"
-      device: "//u525677.your-storagebox.de/backup"
+      o: "username=u526046,password=${STORAGE_BOX_PASSWORD},uid=1000,gid=1000,file_mode=0770,dir_mode=0770"
+      device: "//u526046.your-storagebox.de/backup"
 ```
 
 **Services using Storage Box:**
@@ -288,7 +288,7 @@ open https://audiobooks.rodneyops.com
 cat /root/.smbcredentials
 
 # Test mount manually
-mount -t cifs //u525677.your-storagebox.de/backup /mnt/storagebox \
+mount -t cifs //u526046.your-storagebox.de/backup /mnt/storagebox \
   -o credentials=/root/.smbcredentials,uid=1000,gid=1000
 ```
 
@@ -327,13 +327,13 @@ mount -a
 
 ```bash
 # Check network connectivity
-ping u525677.your-storagebox.de
+ping u526046.your-storagebox.de
 
 # Check if port 445 is accessible
-nc -zv u525677.your-storagebox.de 445
+nc -zv u526046.your-storagebox.de 445
 
 # Try with different options
-mount -t cifs //u525677.your-storagebox.de/backup /mnt/storagebox \
+mount -t cifs //u526046.your-storagebox.de/backup /mnt/storagebox \
   -o credentials=/root/.smbcredentials,vers=3.0
 ```
 
@@ -361,7 +361,7 @@ mount /mnt/storagebox
 du -sh /mnt/storagebox/*
 
 # Via SFTP
-sftp -P 23 u525677@u525677.your-storagebox.de
+sftp -P 23 u526046@u526046.your-storagebox.de
 df -h
 ```
 

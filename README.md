@@ -172,7 +172,7 @@ These services are only accessible via Tailscale VPN and are not exposed through
 | Prowlarr    | `https://prowlarr.kooka-lake.ts.net`   | Indexer management   |
 | qBittorrent | `https://qbittorrent.kooka-lake.ts.net` | Torrent client       |
 | Lidarr      | `https://lidarr.kooka-lake.ts.net`     | Music management     |
-| Readarr     | `https://readarr.kooka-lake.ts.net`    | Book management      |
+| LazyLibrarian | `https://lazylibrarian.kooka-lake.ts.net` | Book management      |
 | Bazarr      | `https://bazarr.kooka-lake.ts.net`     | Subtitle management  |
 | Flaresolverr| `https://flaresolverr.kooka-lake.ts.net` | Cloudflare bypass proxy |
 | Homarr      | `https://homarr.kooka-lake.ts.net`     | Service dashboard    |

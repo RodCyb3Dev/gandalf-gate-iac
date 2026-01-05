@@ -11,8 +11,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 SERVER_IP="95.216.176.147"
-STORAGE_BOX_HOST="u525677.your-storagebox.de"
-STORAGE_BOX_USER="u525677"
+STORAGE_BOX_HOST="u526046.your-storagebox.de"
+STORAGE_BOX_USER="u526046"
 MOUNT_POINT="/mnt/storagebox"
 
 # Check for dry-run mode
@@ -47,7 +47,7 @@ if [ ! -f /root/.ssh/storagebox ]; then
     cat /root/.ssh/storagebox.pub
     echo ""
     echo "⚠️  Please add this key to Storage Box using:"
-    echo "   cat /root/.ssh/storagebox.pub | ssh -p 23 u525677@u525677.your-storagebox.de install-ssh-key"
+    echo "   cat /root/.ssh/storagebox.pub | ssh -p 23 u526046@u526046.your-storagebox.de install-ssh-key"
     exit 1
 else
     echo "✅ SSH key exists"
@@ -58,7 +58,7 @@ EOF
 echo ""
 echo -e "${GREEN}📋 Step 2: Testing SSH key authentication...${NC}"
 
-if ssh root@${SERVER_IP} "ssh -i /root/.ssh/storagebox -p 23 -o StrictHostKeyChecking=no -o ConnectTimeout=5 u525677@u525677.your-storagebox.de 'echo test' 2>&1 | grep -q 'test'"; then
+if ssh root@${SERVER_IP} "ssh -i /root/.ssh/storagebox -p 23 -o StrictHostKeyChecking=no -o ConnectTimeout=5 u526046@u526046.your-storagebox.de 'echo test' 2>&1 | grep -q 'test'"; then
     echo -e "${GREEN}✅ SSH key authentication works!${NC}"
 else
     echo -e "${YELLOW}⚠️  SSH key authentication failed. Make sure the key is added to Storage Box.${NC}"

@@ -59,7 +59,7 @@ entryPoints:
     address: ":443"
     http:
       tls:
-        certResolver: cloudflare
+        certResolver: letsencrypt
         domains:
           - main: "rodneyops.com"
             sans:
@@ -91,22 +91,30 @@ entryPoints:
     address: ":8080"
 
 ##############################################################################
-# Certificate Resolvers (Let's Encrypt via Cloudflare DNS)
+# Certificate Resolvers (Let's Encrypt via HTTP-01 Challenge)
+# Using HTTP-01 because outbound connectivity to Let's Encrypt is blocked
 ##############################################################################
 certificatesResolvers:
   cloudflare:
     acme:
-      # caServer: https://acme-v02.api.letsencrypt.org/directory # production (default)
+      caServer: https://acme-v02.api.letsencrypt.org/directory # production (default)
       # caServer: https://acme-staging-v02.api.letsencrypt.org/directory # staging (testing)
       email: edward.bezrukov@pm.me
       storage: acme.json
-      # Use DNS-01 challenge with Cloudflare
-      dnsChallenge:
-        provider: cloudflare
-        resolvers:
-          - "1.1.1.1:53"
-          - "1.0.0.1:53"
-        delayBeforeCheck: 30
+      # Use HTTP-01 challenge (Let's Encrypt connects to us on port 80)
+      httpChallenge:
+        entryPoint: web
+
+  #letsencrypt:
+  #  acme:
+  #    caServer: https://acme-v02.api.letsencrypt.org/directory
+  #    # caServer: https://acme-staging-v02.api.letsencrypt.org/directory # staging (testing)
+  #    email: info+ssl@kodeflash.dev
+  #    httpChallenge:
+  #      entryPoint: web
+  #    keyType: EC384
+  #    storage: /letsencrypt/acme.json
+  #    tlsChallenge: true
 
 ##############################################################################
 # Providers
@@ -116,7 +124,7 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    network: public
+    # network: public  # Commented out - Docker Compose uses project-prefixed network names
     watch: true
 
   # File provider for dynamic configuration

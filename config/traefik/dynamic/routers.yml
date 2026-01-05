@@ -17,7 +17,7 @@ http:
       middlewares:
         - security-headers
       tls:
-        certResolver: cloudflare
+        certResolver: letsencrypt
 
     ##########################################################################
     # API GATEWAY (if needed in future)

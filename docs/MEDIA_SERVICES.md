@@ -90,7 +90,7 @@ Password: (your password)
 
 3. **Upload Music:**
    - Upload to Storage Box: `/mnt/storagebox/music/`
-   - Or via SFTP: `sftp://u525677@u525677.your-storagebox.de/music`
+   - Or via SFTP: `sftp://u526046@u526046.your-storagebox.de/music`
 
 4. **Scan Library:**
    - Automatically scans every hour

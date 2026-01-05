@@ -61,10 +61,10 @@
         }
       }
     },
-    "readarr.kooka-lake.ts.net:443": {
+    "lazylibrarian.kooka-lake.ts.net:443": {
       "Handlers": {
         "/": {
-          "Proxy": "http://gluetun:8787"
+          "Proxy": "http://gluetun:5299"
         }
       }
     },
@@ -99,7 +99,7 @@
     "radarr.kooka-lake.ts.net:443": false,
     "prowlarr.kooka-lake.ts.net:443": false,
     "lidarr.kooka-lake.ts.net:443": false,
-    "readarr.kooka-lake.ts.net:443": false,
+    "lazylibrarian.kooka-lake.ts.net:443": false,
     "bazarr.kooka-lake.ts.net:443": false,
     "flaresolverr.kooka-lake.ts.net:443": false,
     "qbittorrent.kooka-lake.ts.net:443": false
