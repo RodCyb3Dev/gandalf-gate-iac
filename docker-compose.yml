@@ -38,9 +38,9 @@ volumes:
   hetzner-media:
     driver: local
     driver_opts:
-      type: cifs
-      o: "username=u526046,password=${STORAGE_BOX_PASSWORD},vers=3.0,sec=ntlmv2,uid=1000,gid=1000,file_mode=0777,dir_mode=0777"
-      device: "//u526046.your-storagebox.de/backup"
+      type: none
+      o: bind
+      device: /mnt/storagebox
 
   # Prometheus time-series database
   prometheus-data:
