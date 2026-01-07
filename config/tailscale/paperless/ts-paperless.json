@@ -1,0 +1,27 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "pdf.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8000"
+        }
+      }
+    },
+    "pdf.kooka-lake.ts.net:80": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8000"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "pdf.kooka-lake.ts.net:443": false,
+    "pdf.kooka-lake.ts.net:80": false
+  }
+}

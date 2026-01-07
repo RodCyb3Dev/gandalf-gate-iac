@@ -1,0 +1,137 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    },
+    "5055": {
+      "HTTPS": true
+    },
+    "8085": {
+      "HTTPS": true
+    },
+    "9696": {
+      "HTTPS": true
+    },
+    "7878": {
+      "HTTPS": true
+    },
+    "8989": {
+      "HTTPS": true
+    },
+    "8686": {
+      "HTTPS": true
+    },
+    "9117": {
+      "HTTPS": true
+    },
+    "5299": {
+      "HTTPS": true
+    },
+    "6767": {
+      "HTTPS": true
+    },
+    "8191": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "anduin.kooka-lake.ts.net:80": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8096"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8096"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:5055": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:5055"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:8085": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8085"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:9696": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:9696"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:7878": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:7878"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:8989": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8989"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:8686": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8686"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:9117": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:9117"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:6767": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:6767"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:5299": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:5299"
+        }
+      }
+    },
+    "anduin.kooka-lake.ts.net:8191": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:8191"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "anduin.kooka-lake.ts.net:80": false,
+    "anduin.kooka-lake.ts.net:443": false,
+    "anduin.kooka-lake.ts.net:5055": false,
+    "anduin.kooka-lake.ts.net:8085": false,
+    "anduin.kooka-lake.ts.net:9696": false,
+    "anduin.kooka-lake.ts.net:7878": false,
+    "anduin.kooka-lake.ts.net:8989": false,
+    "anduin.kooka-lake.ts.net:8686": false,
+    "anduin.kooka-lake.ts.net:9117": false,
+    "anduin.kooka-lake.ts.net:5299": false,
+    "anduin.kooka-lake.ts.net:6767": false,
+    "anduin.kooka-lake.ts.net:8191": false
+  }
+}

@@ -1,49 +1,14 @@
 ##############################################################################
 # TRAEFIK - Dynamic Router Configuration
 # Custom routing rules not defined in Docker labels
+# Note: Browser-accessible services (Jellyfin, Immich) use Tailscale Serve directly
+# This file only contains monitoring services accessible via Pangolin/Traefik
 ##############################################################################
 
 http:
   routers:
-    ##########################################################################
-    # CATCH-ALL ROUTER (404 page)
-    ##########################################################################
-    # HTTP to HTTPS redirect for all unmatched domains
-    catch-all-http:
-      entryPoints:
-        - web
-      rule: "HostRegexp(`{catchall:.*}`)"
-      priority: 1  # Low priority - only catches unmatched HTTP requests
-      middlewares:
-        - redirect-to-https
-      service: noop@internal
-
-    ##########################################################################
-    # API GATEWAY (if needed in future)
-    ##########################################################################
-    # api-gateway:
-    #   entryPoints:
-    #     - websecure
-    #   rule: "Host(`api.rodneyops.com`)"
-    #   service: api-gateway
-    #   middlewares:
-    #     - auth-chain
-    #     - rate-limit-api
-    #   tls:
-    #     certResolver: letsencrypt
-
-  services:
-    ##########################################################################
-    # CUSTOM SERVICES
-    ##########################################################################
-    # api-gateway:
-    #   loadBalancer:
-    #     servers:
-    #       - url: "http://api-gateway:8080"
-    #     healthCheck:
-    #       path: "/health"
-    #       interval: "30s"
-    #       timeout: "5s"
+    # Monitoring services are configured via Docker labels in docker-compose.monitoring.yml
+    # This file is kept for any additional dynamic routing needs
 
 tls:
   options:

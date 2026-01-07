@@ -1,0 +1,47 @@
+##############################################################################
+# ANSIBLE PLAYBOOK - Deploy Immich
+# Deploys Immich photo management stack
+##############################################################################
+
+---
+- name: Deploy Immich Stack
+  hosts: production
+  become: yes
+  become_user: root
+  gather_facts: yes
+  
+  vars_files:
+    - vault.yml
+  
+  vars:
+    deploy_path: "{{ hostvars[inventory_hostname]['deploy_path'] | default('/opt/homelab') }}"
+    compose_file_name: "docker-compose.immich.yml"
+    compose_file_path: "{{ deploy_path }}/{{ compose_file_name }}"
+    compose_file_requires_tailscale: true
+
+  pre_tasks:
+    - name: Ensure deployment directory exists
+      file:
+        path: "{{ deploy_path }}"
+        state: directory
+        owner: deploy
+        group: deploy
+        mode: '0755'
+
+  roles:
+    - role: sync_config
+      tags: ['config', 'sync']
+
+    - role: sync_secrets
+      tags: ['secrets', 'sync']
+
+    - role: deploy_compose
+      tags: ['deploy', 'services']
+
+  post_tasks:
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "✅ Immich stack deployment completed!"
+          - "📊 Services: {{ deploy_path }}/{{ compose_file_name }}"
+

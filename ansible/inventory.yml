@@ -9,7 +9,7 @@ all:
       hosts:
         homelab-server:
           ansible_host: 95.216.176.147
-          ansible_user: deploy
+          ansible_user: rodkode
           ansible_port: 22
           # SSH key can be set via environment variable ANSIBLE_SSH_PRIVATE_KEY_FILE
           # or via ansible.cfg, or via command line: -e ansible_ssh_private_key_file=~/.ssh/id_ed25519

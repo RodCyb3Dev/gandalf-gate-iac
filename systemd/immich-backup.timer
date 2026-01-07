@@ -1,0 +1,18 @@
+[Unit]
+Description=Immich Backup Timer
+Documentation=https://docs.immich.app/administration/backup-and-restore/
+After=network-online.target docker.service
+Requires=docker.service
+
+[Timer]
+# Run daily at 2:00 AM
+OnCalendar=daily
+OnCalendar=02:00
+# Run immediately if missed (e.g., server was down)
+Persistent=true
+# Randomize start time by up to 30 minutes to avoid load spikes
+RandomizedDelaySec=1800
+
+[Install]
+WantedBy=timers.target
+

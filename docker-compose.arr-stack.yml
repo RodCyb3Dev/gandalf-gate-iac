@@ -1,0 +1,459 @@
+##############################################################################
+# JELLYFIN-ARR-STACK - Media Automation
+# Gluetun VPN + Jellyfin, Jellyseerr, Sonarr, Radarr, Prowlarr, Lidarr, LazyLibrarian, Bazarr, qBittorrent, Flaresolverr
+##############################################################################
+
+networks:
+  # Shared network with Tailscale (from core compose)
+  ts-anduin:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+
+volumes:
+  # Reference external hetzner-media volume
+  hetzner-media:
+    external: true
+    name: homelab_hetzner-media
+
+services:
+  ##############################################################################
+  # NETWORK GATEWAY - Tailscale
+  ##############################################################################
+
+  ts-anduin:
+    image: tailscale/tailscale:latest
+    container_name: ts-anduin
+    restart: unless-stopped
+    hostname: ts-anduin-gateway
+    env_file:
+      - .env
+    networks:
+      - ts-anduin
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_SERVE_CONFIG=/config/tailscale/jellyfin-arr/ts-jellyfin.json
+      - TS_CERT_DOMAIN=anduin.kooka-lake.ts.net
+      - TS_EXTRA_ARGS=--advertise-routes=172.21.0.0/24 --accept-routes
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/tailscale/jellyfin-arr:/config
+      - ./config/tailscale/jellyfin-arr:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      #- NET_RAW
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.2"
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # MEDIA SERVER - Jellyfin
+  ##############################################################################
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    network_mode: service:ts-anduin
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.kooka-lake.ts.net
+    volumes:
+      - ./config/jellyfin/config:/config
+      - ./config/jellyfin/cache:/cache
+      - hetzner-media:/media:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ##############################################################################
+  # MEDIA REQUEST - Jellyseerr
+  ##############################################################################
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    network_mode: service:ts-anduin
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - CRONTAB=${CRONTAB}
+      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID}
+      - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET}
+      - TRAKT_LIST_ID=${TRAKT_LIST_ID}
+    volumes:
+      - ./config/jellyfin/jellyseerr:/config
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5055/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # MEDIA AUTOMATION - Jellyfin Auto Collections
+  ##############################################################################
+
+  jellyfin-auto-collections:
+    image: jellyfin-auto-collections:latest
+    build:
+      context: ./config/jellyfin/jellyfin-plugins/auto-collections
+      dockerfile: Dockerfile
+    container_name: jellyfin-auto-collections
+    network_mode: service:ts-anduin
+    env_file:
+      - .env
+    environment:
+      - CRONTAB=${CRONTAB}
+      - TZ=${TZ}
+      - JELLYFIN_SERVER_URL=${JELLYFIN_URL}
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - JELLYFIN_USER_ID=${JELLYFIN_USER_ID}
+      - JELLYFIN_USERNAME=${JELLYFIN_USERNAME}
+      - JELLYFIN_PASSWORD=${JELLYFIN_PASSWORD}
+      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID}
+      - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET}
+      - TRAKT_LIST_ID=${TRAKT_LIST_ID}
+      - RADARR_URL=${RADARR_URL}
+      - RADARR_API_KEY=${RADARR_API_KEY}
+      - SONARR_URL=${SONARR_URL}
+      - SONARR_API_KEY=${SONARR_API_KEY}
+      - JELLYSEERR_URL=${JELLYSEERR_SERVER_URL}
+      - JELLYSEERR_EMAIL=${JELLYSEERR_EMAIL}
+      - JELLYSEERR_USERNAME=${JELLYSEERR_USERNAME}
+      - JELLYSEERR_PASSWORD=${JELLYSEERR_PASSWORD}
+      - JELLYSEERR_USER_TYPE=${JELLYSEERR_USER_TYPE:-local}
+    volumes:
+      - ./config/jellyfin/jellyfin-plugins/auto-collections/config.yaml:/app/config/config.yaml
+    restart: unless-stopped
+    depends_on:
+      - ts-anduin
+      - jellyfin
+
+  ##############################################################################
+  # VPN GATEWAY - Gluetun
+  # Note: Arr stack services use network_mode: service:gluetun, so they cannot
+  # have Traefik Docker labels. Routing is configured in config/traefik/dynamic/routers.yml
+  # which routes based on Host headers to the appropriate Gluetun port.
+  ##############################################################################
+
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - ts-anduin
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      #- 5055:5055  # jellyseerr
+      - "8085:8085" # qBittorrent
+      - "9696:9696" # Prowlarr
+      - "7878:7878" # Radarr
+      - "8989:8989" # Sonarr
+      - "8686:8686" # Lidarr
+      - "9117:9117" # jackett
+      - "5299:5299" # LazyLibrarian
+      - "6767:6767" # Bazarr
+      - "8191:8191" # Flaresolverr
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_PROVIDER:-protonvpn}
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${VPN_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${VPN_ADDRESSES}
+      - SERVER_COUNTRIES=${VPN_COUNTRIES:-Netherlands}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/gluetun:/gluetun
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/v1/openvpn/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # TORRENT CLIENT - qBittorrent
+  ##############################################################################
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+      - WEBUI_PORT=8085
+    volumes:
+      - ./config/qbittorrent:/config
+      - hetzner-media:/media
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  ##############################################################################
+  # INDEXER MANAGER - Prowlarr
+  ##############################################################################
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/prowlarr:/config
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.3"
+
+  ##############################################################################
+  # MOVIE MANAGER - Radarr
+  ##############################################################################
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/radarr:/config
+      - hetzner-media:/media
+    depends_on:
+      gluetun:
+        condition: service_healthy
+      prowlarr:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+          cpus: "0.3"
+
+  ##############################################################################
+  # TV SHOW MANAGER - Sonarr
+  ##############################################################################
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/sonarr:/config
+      - hetzner-media:/media
+    depends_on:
+      gluetun:
+        condition: service_healthy
+      prowlarr:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+          cpus: "0.3"
+
+  ##############################################################################
+  # MUSIC MANAGER - Lidarr
+  ##############################################################################
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/lidarr:/config
+      - hetzner-media:/media
+    depends_on:
+      gluetun:
+        condition: service_healthy
+      prowlarr:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.3"
+
+  ##############################################################################
+  # BOOK MANAGER - LazyLibrarian
+  ##############################################################################
+
+  lazylibrarian:
+    image: lscr.io/linuxserver/lazylibrarian:latest
+    container_name: lazylibrarian
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/lazylibrarian:/config
+      - hetzner-media:/media
+    depends_on:
+      gluetun:
+        condition: service_healthy
+      prowlarr:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+
+  ##############################################################################
+  # SUBTITLE MANAGER - Bazarr
+  ##############################################################################
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/bazarr:/config
+      - hetzner-media:/media
+    depends_on:
+      gluetun:
+        condition: service_healthy
+      radarr:
+        condition: service_started
+      sonarr:
+        condition: service_started
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.2"
+
+  ##############################################################################
+  # CAPTCHA SOLVER - Flaresolverr
+  ##############################################################################
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ./config/flaresolverr/config:/config
+      - ./config/flaresolverr/data:/data
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.2"

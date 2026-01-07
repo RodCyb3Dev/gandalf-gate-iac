@@ -1,0 +1,108 @@
+##############################################################################
+# DEPLOY COMPOSE ROLE - Generic Docker Compose Deployer
+# Handles deployment of individual compose files with dependency checks
+##############################################################################
+
+---
+- name: Check if docker compose (v2) is available
+  command: docker compose version
+  register: docker_compose_v2_check
+  changed_when: false
+  failed_when: false
+  tags: deploy_compose
+
+- name: Check if docker-compose (v1) is available
+  command: docker-compose version
+  register: docker_compose_v1_check
+  changed_when: false
+  failed_when: false
+  when: docker_compose_v2_check.rc != 0
+  tags: deploy_compose
+
+- name: Set docker compose command
+  set_fact:
+    docker_compose_cmd: "{{ 'docker compose' if docker_compose_v2_check.rc == 0 else 'docker-compose' }}"
+  tags: deploy_compose
+
+- name: Fail if neither docker compose nor docker-compose is available
+  fail:
+    msg: "Neither 'docker compose' (v2) nor 'docker-compose' (v1) is installed. Please install Docker Compose first."
+  when: docker_compose_v2_check.rc != 0 and docker_compose_v1_check.rc != 0
+  tags: deploy_compose
+
+- name: Check if required services are running (Tailscale)
+  command: docker ps --filter "name=tailscale" --filter "status=running" --format "{{ '{{.Names}}' }}"
+  register: tailscale_check
+  changed_when: false
+  failed_when: false
+  when: compose_file_requires_tailscale | default(true)
+  tags: deploy_compose
+
+- name: Fail if Tailscale is not running
+  fail:
+    msg: "Tailscale service is required but not running. Please deploy core infrastructure first."
+  when: compose_file_requires_tailscale | default(true) and tailscale_check.stdout == ""
+  tags: deploy_compose
+
+- name: Pull latest Docker images
+  command: "{{ docker_compose_cmd }} -f {{ compose_file_path }} pull"
+  args:
+    chdir: "{{ deploy_path }}"
+  register: pull_result
+  changed_when: "'up to date' not in pull_result.stdout"
+  failed_when: false
+  tags: deploy_compose
+
+- name: Display pull warnings
+  debug:
+    msg: "{{ pull_result.stderr_lines | select('match', '.*manifest.*') | list }}"
+  when: pull_result.stderr is defined and pull_result.stderr != ""
+  tags: deploy_compose
+
+- name: Get list of services from docker compose
+  command: "{{ docker_compose_cmd }} -f {{ compose_file_path }} config --services"
+  args:
+    chdir: "{{ deploy_path }}"
+  register: services_list
+  changed_when: false
+  tags: deploy_compose
+
+- name: Display services to be deployed
+  debug:
+    msg: "Services to deploy from {{ compose_file_name }}: {{ services_list.stdout_lines }}"
+  tags: deploy_compose
+
+- name: Deploy services with rolling update
+  command: "{{ docker_compose_cmd }} -f {{ compose_file_path }} up -d --remove-orphans --force-recreate {{ item }}"
+  args:
+    chdir: "{{ deploy_path }}"
+  loop: "{{ services_list.stdout_lines }}"
+  register: deploy_result
+  failed_when: false
+  tags: deploy_compose
+
+- name: Display deployment failures
+  debug:
+    msg: "Service {{ item.item }} failed to deploy: {{ item.stderr_lines | default([]) | select('match', '.*error.*|.*fail.*') | list }}"
+  loop: "{{ deploy_result.results | default([]) }}"
+  when: item.rc != 0
+  tags: deploy_compose
+
+- name: Wait for services to start
+  pause:
+    seconds: 10
+  tags: deploy_compose
+
+- name: Verify services are running
+  command: "{{ docker_compose_cmd }} -f {{ compose_file_path }} ps"
+  args:
+    chdir: "{{ deploy_path }}"
+  register: services_status
+  changed_when: false
+  tags: deploy_compose
+
+- name: Display service status
+  debug:
+    var: services_status.stdout_lines
+  tags: deploy_compose
+

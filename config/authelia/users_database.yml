@@ -12,6 +12,7 @@
 users:
   # Admin user - Rodney
   rodney:
+    disabled: false
     displayname: "Rodney Hammad"
     password: "$argon2id$v=19$m=65536,t=3,p=4$TsO9NK8NtKyV7sTfXttMdQ$RJh1FzQ70TJkaj0u4McDcbFiKyn1+XKnMhVNBNpz2HA"
     email: "rodney@kodeflash.dev"

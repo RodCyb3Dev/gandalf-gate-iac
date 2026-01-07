@@ -111,6 +111,19 @@ http:
         query: "/{status}.html"
 
     ##########################################################################
+    # BASIC AUTHENTICATION
+    ##########################################################################
+    # Basic Auth for services accessible via Tailscale
+    # Credentials are stored in config/traefik/basic-auth.htpasswd
+    # Generate credentials using: htpasswd -nbB username password
+    # Or: docker run --rm httpd:alpine htpasswd -nbB username password
+    basic-auth:
+      basicAuth:
+        usersFile: "/etc/traefik/basic-auth.htpasswd"
+        realm: "Tailscale Services"
+        removeHeader: true
+
+    ##########################################################################
     # REDIRECTS
     ##########################################################################
     redirect-to-https:

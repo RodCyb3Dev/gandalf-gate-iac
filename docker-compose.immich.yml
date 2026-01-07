@@ -1,0 +1,182 @@
+##############################################################################
+# IMMICH - Photo Management
+# Self-hosted photo and video backup solution
+##############################################################################
+
+
+volumes:
+  # Immich-specific Storage Box (separate from media services)
+  # Mounted at /mnt/storagebox-immich on host
+  immich-storagebox:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/storagebox-immich
+  
+  # Immich internal volumes
+  immich-postgres-data:
+  immich-redis-data:
+  immich-uploads:
+  model-cache:
+services:
+  ##############################################################################
+  # NETWORK GATEWAY - Tailscale
+  ##############################################################################
+
+  immich-ts:
+    image: tailscale/tailscale:latest
+    container_name: immich-ts
+    hostname: immich
+    env_file:
+      - .env
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/immich/immich.json
+      - TS_CERT_DOMAIN=immich.kooka-lake.ts.net
+      - TS_USERSPACE=true
+    volumes:
+      - ./config/tailscale/immich:/config
+      - ./config/tailscale/immich:/var/lib/tailscale
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  ##############################################################################
+  # DATABASE - PostgreSQL
+  ##############################################################################
+
+  immich-postgres:
+    image: postgres:15-alpine
+    container_name: immich-postgres
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${IMMICH_DB_USER}
+      - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD}
+      - POSTGRES_DB=${IMMICH_DB_NAME}
+      - POSTGRES_INITDB_ARGS='--data-checksums'
+      - TZ=${TZ:-UTC}
+    volumes:
+      - immich-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: >-
+        pg_isready --dbname="$${POSTGRES_DB}" --username="$${POSTGRES_USER}" || exit 1; Chksum="$$(psql --dbname="$${POSTGRES_DB}" --username="$${POSTGRES_USER}" --tuples-only --no-align --command='SELECT COALESCE(SUM(checksum_failures), 0) FROM pg_stat_database')"; echo "checksum failure count is $$Chksum"; [ "$$Chksum" = '0' ] || exit 1
+      interval: 5m
+      start_interval: 30s
+      start_period: 5m
+    command: >-
+      postgres -c shared_preload_libraries=vectors.so -c 'search_path="$$user", public, vectors' -c logging_collector=on -c max_wal_size=2GB -c shared_buffers=512MB -c wal_compression=on
+    restart: always
+
+  ##############################################################################
+  # CACHE - Redis
+  ##############################################################################
+
+  immich-redis:
+    image: redis:7-alpine
+    container_name: immich-redis
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - REDIS_PASSWORD=${IMMICH_REDIS_PASSWORD}
+    command: redis-server --save 60 1 --loglevel warning --requirepass "$${REDIS_PASSWORD}"
+    volumes:
+      - immich-redis-data:/data
+    healthcheck:
+      test: >-
+        redis-cli -a "$${REDIS_PASSWORD}" ping || exit 1; echo "Redis connection failed"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # APPLICATION SERVER - Immich Server
+  ##############################################################################
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    container_name: immich-server
+    restart: unless-stopped
+    network_mode: service:immich-ts
+    env_file:
+      - .env
+    environment:
+      - DB_HOSTNAME=immich-postgres
+      - DB_USERNAME=${IMMICH_DB_USER}
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD}
+      - DB_DATABASE=${IMMICH_DB_NAME}
+      - REDIS_HOSTNAME=immich-redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${IMMICH_REDIS_PASSWORD}
+      - UPLOAD_LOCATION=/usr/src/app/upload
+      - TZ=${TZ:-UTC}
+    volumes:
+      # Internal volume for Immich uploads (new photos/videos)
+      - immich-uploads:/usr/src/app/upload
+      # Immich-specific Storage Box for accessing existing media (read-only)
+      # Mounted at /mnt/storagebox-immich on host (u527847.your-storagebox.de)
+      # Accessible as /media in container
+      - immich-storagebox:/media:ro
+    depends_on:
+      immich-postgres:
+        condition: service_healthy
+      immich-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/server-info/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  ##############################################################################
+  # MICROSERVICES - Immich ML Processing
+  ##############################################################################
+
+  immich-microservices:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    container_name: immich-microservices
+    restart: always
+    env_file:
+      - .env
+    network_mode: service:immich-ts
+    extends:
+      file: config/immich/hwaccel.yml
+      service: hwaccel
+    command: [ "start.sh", "microservices" ]
+    volumes:
+      - immich-uploads:/usr/src/app/upload
+    depends_on:
+      - immich-server
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    volumes:
+      - model-cache:/usr/src/app/model-cache
+    env_file:
+      - .env
+    restart: always
+
+  ##############################################################################
+  # WEB INTERFACE - Immich Web
+  ##############################################################################
+
+  immich-web:
+    image: ghcr.io/immich-app/immich-web:${IMMICH_VERSION:-release}
+    container_name: immich-web
+    restart: unless-stopped
+    network_mode: service:immich-ts
+    env_file:
+      - .env
+    environment:
+      - TZ=${TZ:-UTC}
+    depends_on:
+      - immich-server

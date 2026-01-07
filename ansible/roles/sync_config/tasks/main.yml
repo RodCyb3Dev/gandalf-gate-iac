@@ -1,6 +1,6 @@
 ##############################################################################
 # SYNC CONFIG ROLE - Synchronize configuration files
-# Preserves existing runtime files (acme.json, logs, etc.)
+# Preserves existing runtime files (logs, etc.)
 ##############################################################################
 
 ---
@@ -12,10 +12,7 @@
     group: deploy
     mode: '0755'
   loop:
-    - traefik
-    - traefik/dynamic
-    - traefik/logs
-    - authelia
+    - tailscale
     - crowdsec
     - grafana
     - grafana/provisioning
@@ -26,9 +23,11 @@
     - promtail
     - fail2ban
     - fail2ban/filter.d
+    - immich
+    - paperless
   tags: sync_config
 
-- name: Sync docker-compose.yml
+- name: Sync docker-compose.yml (core)
   synchronize:
     src: "{{ playbook_dir }}/../docker-compose.yml"
     dest: "{{ deploy_path }}/docker-compose.yml"
@@ -36,12 +35,62 @@
     perms: yes
   tags: sync_config
 
-- name: Set ownership of docker-compose.yml
+- name: Sync docker-compose.jellyfin.yml
+  synchronize:
+    src: "{{ playbook_dir }}/../docker-compose.jellyfin.yml"
+    dest: "{{ deploy_path }}/docker-compose.jellyfin.yml"
+    mode: push
+    perms: yes
+  when: compose_file_name | default('') == 'docker-compose.jellyfin.yml' or compose_file_name | default('') == ''
+  tags: sync_config
+
+- name: Sync docker-compose.arr-stack.yml
+  synchronize:
+    src: "{{ playbook_dir }}/../docker-compose.arr-stack.yml"
+    dest: "{{ deploy_path }}/docker-compose.arr-stack.yml"
+    mode: push
+    perms: yes
+  when: compose_file_name | default('') == 'docker-compose.arr-stack.yml' or compose_file_name | default('') == ''
+  tags: sync_config
+
+- name: Sync docker-compose.immich.yml
+  synchronize:
+    src: "{{ playbook_dir }}/../docker-compose.immich.yml"
+    dest: "{{ deploy_path }}/docker-compose.immich.yml"
+    mode: push
+    perms: yes
+  when: compose_file_name | default('') == 'docker-compose.immich.yml' or compose_file_name | default('') == ''
+  tags: sync_config
+
+- name: Sync docker-compose.pdf.yml
+  synchronize:
+    src: "{{ playbook_dir }}/../docker-compose.pdf.yml"
+    dest: "{{ deploy_path }}/docker-compose.pdf.yml"
+    mode: push
+    perms: yes
+  when: compose_file_name | default('') == 'docker-compose.pdf.yml' or compose_file_name | default('') == ''
+  tags: sync_config
+
+- name: Check which docker-compose files exist
+  stat:
+    path: "{{ deploy_path }}/{{ item }}"
+  register: compose_file_stat
+  loop:
+    - docker-compose.yml
+    - docker-compose.jellyfin.yml
+    - docker-compose.arr-stack.yml
+    - docker-compose.immich.yml
+    - docker-compose.pdf.yml
+  tags: sync_config
+
+- name: Set ownership of docker-compose files
   file:
-    path: "{{ deploy_path }}/docker-compose.yml"
+    path: "{{ deploy_path }}/{{ item.item }}"
     owner: deploy
     group: deploy
     mode: '0644'
+  loop: "{{ compose_file_stat.results }}"
+  when: item.stat.exists | default(false)
   tags: sync_config
 
 - name: Set ownership of config directory
@@ -50,6 +99,24 @@
     owner: deploy
     group: deploy
     recurse: yes
+  tags: sync_config
+
+- name: Template Pangolin config file (with secrets from environment)
+  template:
+    src: pangolin-config.yml.j2
+    dest: "{{ deploy_path }}/config/pangolin/config.yml"
+    owner: deploy
+    group: deploy
+    mode: '0644'
+  vars:
+    pangolin_smtp_host: "{{ (pangolin_vars | default({})).smtp_host | default(lookup('env', 'PANGOLIN_SMTP_HOST') | default('smtp.protonmail.ch')) }}"
+    pangolin_smtp_port: "{{ (pangolin_vars | default({})).smtp_port | default(lookup('env', 'PANGOLIN_SMTP_PORT') | default(587)) }}"
+    pangolin_smtp_user: "{{ (pangolin_vars | default({})).smtp_user | default(lookup('env', 'PANGOLIN_SMTP_USER') | default('info@kodeflash.dev')) }}"
+    pangolin_smtp_pass: "{{ (pangolin_vars | default({})).smtp_pass | default(lookup('env', 'PANGOLIN_SMTP_PASS') | default('')) }}"
+    pangolin_no_reply_email: "{{ (pangolin_vars | default({})).no_reply_email | default(lookup('env', 'PANGOLIN_NO_REPLY_EMAIL') | default('no-reply@kodeflash.dev')) }}"
+    pangolin_admin_email: "{{ (pangolin_vars | default({})).admin_email | default(lookup('env', 'PANGOLIN_ADMIN_EMAIL') | default('rodney@kodeflash.dev')) }}"
+    pangolin_admin_password: "{{ (pangolin_vars | default({})).admin_password | default(lookup('env', 'PANGOLIN_ADMIN_PASSWORD') | default('')) }}"
+  no_log: true
   tags: sync_config
 
 - name: Sync configuration files (excluding secrets and runtime data)
@@ -61,7 +128,6 @@
     rsync_opts:
       - "--exclude=*.log"
       - "--exclude=*.gz"
-      - "--exclude=acme.json"
       - "--exclude=*.db"
       - "--exclude=*.sqlite*"
       - "--exclude=*.state"
@@ -73,21 +139,13 @@
       - "--exclude=*.key"
       - "--exclude=*.pem"
       - "--exclude=*.crt"
+      - "--exclude=pangolin/config.yml"
       - "--update"
   tags: sync_config
 
-- name: Ensure Traefik acme.json exists and has correct permissions
+- name: Ensure Immich config directory exists
   file:
-    path: "{{ deploy_path }}/config/traefik/acme.json"
-    state: touch
-    owner: deploy
-    group: deploy
-    mode: '0600'
-  tags: sync_config
-
-- name: Ensure Traefik logs directory exists
-  file:
-    path: "{{ deploy_path }}/config/traefik/logs"
+    path: "{{ deploy_path }}/config/immich"
     state: directory
     owner: deploy
     group: deploy

@@ -49,7 +49,7 @@ theme: "dark"
 # TOTP (Time-based One-Time Password - 2FA)
 ##############################################################################
 totp:
-  disable: false  # Enable TOTP for 2FA
+  disable: true
   issuer: "rodneyops.com"
   algorithm: "sha1"
   digits: 6

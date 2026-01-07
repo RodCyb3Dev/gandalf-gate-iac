@@ -1,7 +1,6 @@
 ##############################################################################
-# ANSIBLE PLAYBOOK - Homelab Deployment (Core Infrastructure)
-# Manages deployment of core infrastructure only
-# For individual services, use playbooks in playbooks/ directory
+# ANSIBLE PLAYBOOK - Deploy Core Infrastructure
+# Deploys Tailscale, Security, and Monitoring services
 ##############################################################################
 
 ---
@@ -11,7 +10,6 @@
   become_user: root
   gather_facts: yes
   
-  # Load vault file - password comes from ANSIBLE_VAULT_PASS env var via vault_password_file
   vars_files:
     - vault.yml
   
@@ -65,4 +63,4 @@
           - "📊 Services: {{ deploy_path }}/{{ compose_file_name }}"
           - "🌐 Domain: {{ domain }}"
           - "⏰ Timezone: {{ timezone }}"
-          - "💡 To deploy individual services, use: ansible-playbook playbooks/deploy-<service>.yml"
+

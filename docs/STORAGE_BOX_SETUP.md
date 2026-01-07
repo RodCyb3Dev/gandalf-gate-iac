@@ -26,8 +26,9 @@ Your homelab uses a Hetzner Storage Box for media storage, providing:
 
 1. **Server Requirements:**
    - ✅ Ubuntu 24.04 (Noble)
-   - ✅ CIFS utilities installed
+   - ✅ CIFS utilities installed (`cifs-utils`, `davfs2`, `sshfs`, `fuse3`)
    - ✅ SSH access as root
+   - ⚠️ **Note:** If `apt-get install` fails with TLS handshake errors, see [APT Package Manager TLS Handshake Errors](#apt-package-manager-tls-handshake-errors) in Troubleshooting
 
 2. **Storage Box:**
    - ✅ Hetzner Storage Box activated
@@ -336,6 +337,59 @@ nc -zv u526046.your-storagebox.de 445
 mount -t cifs //u526046.your-storagebox.de/backup /mnt/storagebox \
   -o credentials=/root/.smbcredentials,vers=3.0
 ```
+
+### APT Package Manager TLS Handshake Errors
+
+**Problem:** `apt-get update` or `apt-get install` fails with TLS handshake errors:
+
+```
+W: Failed to fetch https://mirror.hetzner.com/ubuntu/packages/dists/noble/InRelease
+Could not handshake: An unexpected TLS packet was received.
+```
+
+**Solution:** Switch from Hetzner's HTTPS mirrors to standard Ubuntu HTTP mirrors.
+
+1. **Backup the current sources file:**
+   ```bash
+   sudo cp /etc/apt/sources.list.d/ubuntu.sources /etc/apt/sources.list.d/ubuntu.sources.backup
+   ```
+
+2. **Update the sources file:**
+   ```bash
+   sudo sed -i 's|https://mirror.hetzner.com/ubuntu/packages|http://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+   sudo sed -i 's|https://mirror.hetzner.com/ubuntu/security|http://security.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
+   ```
+
+3. **Verify the changes:**
+   ```bash
+   sudo cat /etc/apt/sources.list.d/ubuntu.sources | grep -A 2 'URIs:'
+   ```
+   
+   Should show:
+   ```
+   URIs: http://archive.ubuntu.com/ubuntu
+   ...
+   URIs: http://security.ubuntu.com/ubuntu
+   ```
+
+4. **Update package lists:**
+   ```bash
+   sudo apt-get update
+   ```
+
+5. **Install required mount tools:**
+   ```bash
+   sudo apt-get install -y davfs2 sshfs cifs-utils fuse3
+   ```
+
+6. **Verify installation:**
+   ```bash
+   which mount.davfs && which sshfs && which mount.cifs && echo '✅ All mount tools available'
+   ```
+
+**Why this happens:** Hetzner's HTTPS mirrors can have TLS handshake issues on some systems, especially with certain network configurations or SSL/TLS library versions. Using the standard Ubuntu HTTP mirrors is more reliable and doesn't require TLS.
+
+**Note:** This fix applies to Ubuntu 24.04 (Noble) systems. The sources file uses the deb822 format (`ubuntu.sources`) rather than the older `sources.list` format.
 
 ---
 

@@ -91,10 +91,32 @@ config/tailscale/*.state
 config/tailscale/tailscaled.state
 config/tailscale/*.log
 config/tailscale/*.txt
+config/tailscale/*.log.*
+config/tailscale/*.cached.*
 
 # Grafana
 config/grafana/grafana.db
 config/grafana/grafana-backup.db
+
+# Paperless
+config/paperless/data/
+config/paperless/db/
+config/paperless/redis/
+
+# Gotify
+config/gotify/*
+
+# Navidrome
+config/navidrome/*
+
+# Audiobookshelf
+config/audiobooks/*
+
+# Jellyfin
+config/jellyfin/*
+
+# Uptime Kuma
+config/uptime-kuma/*
 
 # Storage Box credentials
 .storage-box-credentials
@@ -214,3 +236,4 @@ $RECYCLE.BIN/
 [._]ss[a-gi-z]
 [._]sw[a-p]
 Session.vim
+config/pangolin/key

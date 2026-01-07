@@ -1,0 +1,27 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "immich.kooka-lake.ts.net:80": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:2283"
+        }
+      }
+    },
+    "immich.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:2283"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "immich.kooka-lake.ts.net:80": false,
+    "immich.kooka-lake.ts.net:443": false
+  }
+}

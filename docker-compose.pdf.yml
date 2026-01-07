@@ -1,0 +1,137 @@
+##############################################################################
+# PDF MANAGEMENT - Paperless-ngx
+# Document management system with OCR
+##############################################################################
+
+volumes:
+  # Reference external hetzner-media volume
+  hetzner-media:
+    external: true
+    name: homelab_hetzner-media
+  
+  # Paperless internal volumes
+  paperless-data:
+  paperless-db:
+  paperless-redis-data:
+
+services:
+  ##############################################################################
+  # NETWORK GATEWAY - Tailscale
+  ##############################################################################
+
+  paperless-ts:
+    image: tailscale/tailscale:latest
+    container_name: paperless-ts
+    hostname: paperless
+    env_file:
+      - .env
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/tailscale/paperless/ts-paperless.json
+      - TS_CERT_DOMAIN=pdf.kooka-lake.ts.net
+      - TS_USERSPACE=true
+    volumes:
+      - ./config/tailscale/paperless:/config
+      - ./config/tailscale/paperless:/var/lib/tailscale
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # DATABASE - PostgreSQL
+  ##############################################################################
+
+  paperless-db:
+    image: postgres:15-alpine
+    container_name: paperless-db
+    restart: unless-stopped
+    networks: service:paperless-ts
+    environment:
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${PAPERLESS_DB_PASSWORD:-paperless}
+      - POSTGRES_DB=paperless
+      - TZ=${TZ:-UTC}
+    volumes:
+      - paperless-db:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # CACHE - Redis
+  ##############################################################################
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    networks:
+      - paperless
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - paperless-redis-data:/data
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ##############################################################################
+  # APPLICATION - Paperless-ngx
+  ##############################################################################
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless
+    restart: unless-stopped
+    networks: service:paperless-ts
+    env_file:
+      - .env
+    environment:
+      - PAPERLESS_URL=https://pdf.kooka-lake.ts.net
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY:-change-me}
+      - PAPERLESS_TIME_ZONE=${TZ:-UTC}
+      - PAPERLESS_OCR_LANGUAGE=${PAPERLESS_OCR_LANGUAGE:-eng}
+      - PAPERLESS_DBENGINE=postgresql
+      - PAPERLESS_DBHOST=paperless-db
+      - PAPERLESS_DBPORT=5432
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${PAPERLESS_DB_PASSWORD:-paperless}
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - PAPERLESS_CONSUMPTION_DIR=/usr/src/paperless/consume
+      - PAPERLESS_DATA_DIR=/usr/src/paperless/data
+      - PAPERLESS_MEDIA_ROOT=/usr/src/paperless/media
+      - PAPERLESS_STATICFILES_DIR=/usr/src/paperless/static
+      - TZ=${TZ:-UTC}
+    volumes:
+      - paperless-data:/usr/src/paperless/data
+      - paperless-data:/usr/src/paperless/media
+      - paperless-data:/usr/src/paperless/consume
+      - paperless-data:/usr/src/paperless/static
+      - hetzner-media:/documents:ro
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

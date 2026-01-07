@@ -170,11 +170,38 @@ ansible-check: ## Check Ansible syntax
 	@cd ansible && ansible-playbook --syntax-check playbook.yml
 	@cd ansible && ansible-inventory --list
 
-ansible-deploy: ## Deploy with Ansible (loads .env automatically)
-	@echo "Deploying with Ansible..."
+ansible-deploy: ansible-deploy-core ## Deploy core infrastructure (default)
+
+ansible-deploy-core: ## Deploy core infrastructure (Tailscale, Security, Monitoring)
+	@echo "Deploying core infrastructure with Ansible..."
 	@set -a && . .env && set +a && cd ansible && ansible-playbook playbook.yml -v
 
-ansible-deploy-check: ## Dry run deployment (check mode)
+ansible-deploy-jellyfin: ## Deploy Jellyfin stack
+	@echo "Deploying Jellyfin stack with Ansible..."
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbooks/deploy-jellyfin.yml -v
+
+ansible-deploy-arr: ## Deploy Arr stack (Gluetun + all Arr services)
+	@echo "Deploying Arr stack with Ansible..."
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbooks/deploy-arr-stack.yml -v
+
+ansible-deploy-immich: ## Deploy Immich photo management
+	@echo "Deploying Immich stack with Ansible..."
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbooks/deploy-immich.yml -v
+
+ansible-deploy-pdf: ## Deploy PDF document management
+	@echo "Deploying PDF management stack with Ansible..."
+	@set -a && . .env && set +a && cd ansible && ansible-playbook playbooks/deploy-pdf.yml -v
+
+ansible-deploy-all: ## Deploy all services (core + all stacks)
+	@echo "Deploying all services with Ansible..."
+	@set -a && . .env && set +a && cd ansible && \
+		ansible-playbook playbook.yml -v && \
+		ansible-playbook playbooks/deploy-jellyfin.yml -v && \
+		ansible-playbook playbooks/deploy-arr-stack.yml -v && \
+		ansible-playbook playbooks/deploy-immich.yml -v && \
+		ansible-playbook playbooks/deploy-pdf.yml -v
+
+ansible-deploy-check: ## Dry run deployment (check mode) - core only
 	@set -a && . .env && set +a && cd ansible && ansible-playbook playbook.yml --check
 
 ansible-deploy-tags: ## Deploy specific tags (usage: make ansible-deploy-tags TAGS=sync_config,deploy_services)

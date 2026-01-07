@@ -1,0 +1,27 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "bard.kooka-lake.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:4533"
+        }
+      }
+    },
+    "bard.kooka-lake.ts.net:80": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:4533"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "bard.kooka-lake.ts.net:443": false,
+    "bard.kooka-lake.ts.net:80": false
+  }
+}
