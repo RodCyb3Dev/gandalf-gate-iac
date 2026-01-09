@@ -437,7 +437,8 @@ services:
     tmpfs:
       # Use tmpfs for Checkmk temporary files for optimal performance (RAM-based)
       # Path must match the site ID (homelab)
-      - /opt/omd/sites/homelab/tmp:uid=1000,gid=1000
+      # Note: /omd is a symlink to /opt/omd in the container
+      - /omd/sites/homelab/tmp:uid=1000,gid=1000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/${CHECKMK_SITE_ID:-homelab}/check_mk/"]
       interval: 30s
