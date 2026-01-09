@@ -155,8 +155,8 @@ services:
           memory: 256M
           cpus: "0.3"
     healthcheck:
-      # Loki doesn't have wget, use sh with netcat or check process
-      test: ["CMD-SHELL", "nc -z localhost 3100 || exit 1"]
+      # Loki doesn't have wget or netcat, check if process is running
+      test: ["CMD-SHELL", "ps aux | grep -v grep | grep loki || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
