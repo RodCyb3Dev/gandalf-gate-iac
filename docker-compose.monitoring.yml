@@ -419,13 +419,9 @@ services:
     expose:
       - 5000
       - 8000
-    security_opt:
-      - no-new-privileges:true
-    tmpfs:
-      - /tmp
-      - /var/tmp
-    # Note: Checkmk requires root to initialize the site, but runs services as non-root
-    # The Checkmk image handles privilege dropping internally
+    # Note: Checkmk requires root to initialize the site
+    # Removed no-new-privileges and tmpfs restrictions as Checkmk needs root during initialization
+    # The Checkmk image handles privilege dropping internally after site creation
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/${CHECKMK_SITE_ID:-homelab}/check_mk/"]
       interval: 30s
