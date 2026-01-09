@@ -434,6 +434,10 @@ services:
     # Note: Checkmk requires root to initialize the site
     # Removed no-new-privileges and tmpfs restrictions as Checkmk needs root during initialization
     # The Checkmk image handles privilege dropping internally after site creation
+    tmpfs:
+      # Use tmpfs for Checkmk temporary files for optimal performance (RAM-based)
+      # Path must match the site ID (homelab)
+      - /opt/omd/sites/homelab/tmp:uid=1000,gid=1000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/${CHECKMK_SITE_ID:-homelab}/check_mk/"]
       interval: 30s
