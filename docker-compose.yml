@@ -6,6 +6,9 @@ networks:
   caddy-proxy:
     driver: bridge
     name: caddy-proxy
+  grafana-monitoring:
+    external: true
+    name: homelab_grafana-monitoring
 
 secrets:
   cf-token:
@@ -56,6 +59,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - caddy-proxy
+      - grafana-monitoring
     security_opt:
       - no-new-privileges:true
     tmpfs:
@@ -169,6 +173,7 @@ services:
       - ./config/authelia:/config
     networks:
       - caddy-proxy
+      - grafana-monitoring
     depends_on:
       authelia-postgres:
         condition: service_healthy
@@ -193,6 +198,7 @@ services:
     user: "1000:1000"
     expose:
       - 9091
+      - 9959  # Metrics endpoint for Prometheus
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/api/health"]

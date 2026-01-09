@@ -35,14 +35,17 @@ scrape_configs:
           service: "prometheus"
 
   ##########################################################################
-  # TRAEFIK METRICS
+  # CADDY METRICS (Admin API - Port 2019)
+  # Note: Caddy doesn't expose Prometheus metrics by default
+  # To enable: add metrics plugin or use caddy-metrics module
+  # For now, monitoring via logs and health checks
   ##########################################################################
-  - job_name: "traefik"
-    static_configs:
-      - targets: ["traefik:8080"]
-        labels:
-          service: "traefik"
-    metrics_path: "/metrics"
+  # - job_name: "caddy"
+  #   static_configs:
+  #     - targets: ["caddy:2019"]
+  #       labels:
+  #         service: "caddy"
+  #   metrics_path: "/metrics"
 
   ##########################################################################
   # CROWDSEC METRICS
@@ -85,12 +88,14 @@ scrape_configs:
 
   ##########################################################################
   # DOCKER CONTAINERS (via Docker Daemon)
+  # Note: Requires Docker metrics enabled in daemon.json:
+  # { "metrics-addr": "0.0.0.0:9323", "experimental": true }
   ##########################################################################
-  - job_name: "docker"
-    static_configs:
-      - targets: ["172.20.0.1:9323"]
-        labels:
-          service: "docker-daemon"
+  # - job_name: "docker"
+  #   static_configs:
+  #     - targets: ["172.20.0.1:9323"]
+  #       labels:
+  #         service: "docker-daemon"
 
   ##########################################################################
   # GRAFANA METRICS
@@ -114,6 +119,7 @@ scrape_configs:
 
   ##########################################################################
   # BLACKBOX EXPORTER (HTTP/TCP Probes - Optional)
+  # Uncomment to enable endpoint monitoring
   ##########################################################################
   # - job_name: 'blackbox'
   #   metrics_path: /probe
@@ -122,8 +128,10 @@ scrape_configs:
   #   static_configs:
   #     - targets:
   #         - https://grafana.rodneyops.com
-  #         - https://traefik.rodneyops.com
   #         - https://auth.rodneyops.com
+  #         - https://status.rodneyops.com
+  #         - https://rodify.rodneyops.com
+  #         - https://dockge.rodneyops.com
   #   relabel_configs:
   #     - source_labels: [__address__]
   #       target_label: __param_target

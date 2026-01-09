@@ -32,7 +32,8 @@ scrape_configs:
 
   ##########################################################################
   # DOCKER CONTAINER LOGS (Primary - Best Practice)
-  # Traefik and other services log to stdout/stderr, captured via Docker
+  # All services log to stdout/stderr, captured via Docker
+  # Caddy, Authelia, and other services are automatically discovered
   ##########################################################################
   - job_name: containers
     docker_sd_configs:
