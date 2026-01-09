@@ -305,10 +305,12 @@ services:
     # Note: Uptime Kuma needs to chown data directory on startup
     # Removed user restriction
     healthcheck:
+      # Uptime Kuma API ping endpoint
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/ping"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
     logging:
       driver: "json-file"
       options:
