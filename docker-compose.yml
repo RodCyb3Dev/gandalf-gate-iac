@@ -105,6 +105,7 @@ services:
       - caddy-data:/data
       - caddy-config:/config
       - ./config/caddy/cf-token:/run/secrets/cf-token:ro
+      - /var/log/caddy:/var/log/caddy
     environment:
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf-token
       - TZ=${TZ:-UTC}
@@ -233,7 +234,8 @@ services:
       - authelia-postgres-data:/var/lib/postgresql/data
     security_opt:
       - no-new-privileges:true
-    user: "999:999"
+    # Note: PostgreSQL needs root to read secrets during initialization
+    # After initialization, it runs as postgres user (999:999) internally
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U authelia -d authelia"]
