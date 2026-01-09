@@ -154,6 +154,26 @@ dockge.rodneyops.com {
 
 }
 
+# Checkmk - Requires 2FA
+checkmk.rodneyops.com {
+    forward_auth authelia:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+
+    reverse_proxy checkmk:8000
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+        -X-Powered-By
+    }
+}
+
 ##############################################################################
 # HTTP to HTTPS Redirect (catch-all)
 ##############################################################################

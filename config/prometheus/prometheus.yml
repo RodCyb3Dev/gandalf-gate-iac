@@ -118,6 +118,20 @@ scrape_configs:
     metrics_path: "/metrics"
 
   ##########################################################################
+  # CHECKMK METRICS
+  # Note: Checkmk can export metrics to Prometheus via its REST API
+  # The metrics endpoint may vary based on Checkmk version and configuration
+  # For now, we'll monitor Checkmk via its web interface and agent receiver
+  ##########################################################################
+  # - job_name: "checkmk"
+  #   static_configs:
+  #     - targets: ["checkmk:5000"]
+  #       labels:
+  #         service: "checkmk"
+  #   metrics_path: "/homelab/check_mk/api/1.0/domain-types/metric/collections/all"
+  #   scrape_interval: 60s
+
+  ##########################################################################
   # BLACKBOX EXPORTER (HTTP/TCP Probes - Optional)
   # Uncomment to enable endpoint monitoring
   ##########################################################################

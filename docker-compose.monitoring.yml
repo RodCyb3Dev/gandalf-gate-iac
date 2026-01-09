@@ -28,6 +28,9 @@ volumes:
   # Dockge data
   dockge-data:
 
+  # Checkmk data
+  checkmk-data:
+
 services:
   ##############################################################################
   # MONITORING - Prometheus (Metrics Collection)
@@ -382,6 +385,58 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    # Note: Caddy routing is configured in Caddyfile, not via Docker labels
+
+  ##############################################################################
+  # MONITORING - Checkmk (Infrastructure Monitoring)
+  ##############################################################################
+
+  checkmk:
+    image: checkmk/check-mk-raw:2.3.0-latest
+    container_name: checkmk
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - grafana-monitoring
+      - caddy-proxy
+    environment:
+      - CMK_SITE_ID=${CHECKMK_SITE_ID:-homelab}
+      - CMK_PASSWORD=${CHECKMK_PASSWORD:-changeme}
+      - TZ=${TZ:-UTC}
+    volumes:
+      - checkmk-data:/omd/sites
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "5000:5000"  # Agent receiver
+      - "8000:8000"  # Web UI (internal, proxied via Caddy)
+    expose:
+      - 5000
+      - 8000
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+      - /opt/omd/sites/${CHECKMK_SITE_ID:-homelab}/tmp:uid=1000,gid=1000
+    user: "1000:1000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/${CHECKMK_SITE_ID:-homelab}/check_mk/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
     logging:
       driver: "json-file"
       options:

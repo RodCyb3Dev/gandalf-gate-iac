@@ -187,6 +187,8 @@ access_control:
     - domain:
         - "grafana.rodneyops.com"
         - "status.rodneyops.com"
+        - "checkmk.rodneyops.com"
+        - "dockge.rodneyops.com"
       policy: "two_factor"
 
     # Notifications - Gotify with API bypass
