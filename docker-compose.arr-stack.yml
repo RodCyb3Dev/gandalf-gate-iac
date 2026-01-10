@@ -89,6 +89,15 @@ services:
       - ./config/jellyfin/config:/config
       - ./config/jellyfin/cache:/cache
       - hetzner-media:/media:ro
+    # Use tmpfs for transcoding cache to improve I/O performance
+    # This stores transcoded segments in RAM instead of disk
+    tmpfs:
+      - /tmp
+      - /var/tmp
+      - /config/data/transcodes:size=2G  # 2GB RAM for transcoding cache
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8096"]
       interval: 30s
