@@ -103,7 +103,7 @@ services:
       - no-new-privileges:true
     user: "1000:1000"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8096"]
+      test: ["CMD", "curl", "-f", "http://localhost:8096"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -250,12 +250,12 @@ services:
     #    limits:
     #      memory: 128M
     #      cpus: "0.3"
-    #healthcheck:
-    #  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
-    #  interval: 30s
-    #  timeout: 10s
-    #  retries: 3
-    #  start_period: 60s
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     logging:
       driver: "json-file"
       options:
@@ -283,8 +283,10 @@ services:
       - ./config/qbittorrent:/config
       - hetzner-media:/media
     depends_on:
-      - gluetun
-      - ts-anduin
+      gluetun:
+        condition: service_healthy
+      ts-anduin:
+        condition: service_started
     #security_opt:
     #  - no-new-privileges:true
     #read_only: true
@@ -298,7 +300,7 @@ services:
      #      memory: 256M
      #      cpus: "0.5"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8085/api/v2/app/version"]
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -343,7 +345,7 @@ services:
      #      memory: 128M
      #      cpus: "0.3"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9696/api/v1/system/status"]
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -391,7 +393,7 @@ services:
      #      memory: 192M
      #      cpus: "0.3"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7878/api/v3/system/status"]
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -439,7 +441,7 @@ services:
      #      memory: 192M
      #      cpus: "0.3"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8989/api/v3/system/status"]
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -486,11 +488,11 @@ services:
      #    limits:
      #      memory: 128M
      #      cpus: "0.3"
-     #healthcheck:
-     #  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8686/api/v1/system/status"]
-    #  interval: 30s
-    #  timeout: 10s
-    #  retries: 3
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:
@@ -534,11 +536,11 @@ services:
      #    limits:
      #      memory: 256M
      #      cpus: "0.5"
-     #healthcheck:
-     #  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5299/api"]
-    #  interval: 30s
-    #  timeout: 10s
-    #  retries: 3
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:
@@ -584,11 +586,11 @@ services:
      #    limits:
      #      memory: 128M
      #      cpus: "0.2"
-     #healthcheck:
-     #  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6767/api/system/status"]
-    #  interval: 30s
-    #  timeout: 10s
-    #  retries: 3
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:
@@ -630,11 +632,11 @@ services:
      #    limits:
      #      memory: 128M
      #      cpus: "0.2"
-     #healthcheck:
-     #  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8191/v1"]
-    #  interval: 30s
-    #  timeout: 10s
-    #  retries: 3
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:

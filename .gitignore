@@ -129,6 +129,15 @@ config/uptime-kuma/*
 .storage-box-credentials
 /root/.storage-box-credentials
 
+# Immich
+config/immich/*
+config/immich/hwaccel.yml
+config/immich/backup.sh
+
+# Jellyfin
+config/jellyfin/*
+!config/jellyfin/jellyfin-plugins/auto-collections
+
 ##############################################################################
 # DOCKER & CONTAINERS
 ##############################################################################
