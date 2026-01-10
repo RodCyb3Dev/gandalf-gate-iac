@@ -84,7 +84,7 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ:-UTC}
-      - JELLYFIN_PublishedServerUrl=https://jellyfin.kooka-lake.ts.net
+      - JELLYFIN_PublishedServerUrl=${JELLYFIN_URL}
     volumes:
       - ./config/jellyfin/config:/config
       - ./config/jellyfin/cache:/cache
@@ -240,10 +240,11 @@ services:
           memory: 128M
           cpus: "0.3"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/v1/openvpn/status", "--header", "Authorization: Basic $(echo -n '':'' | base64)"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
       start_period: 60s
     logging:
       driver: "json-file"
