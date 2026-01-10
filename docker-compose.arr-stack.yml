@@ -89,6 +89,10 @@ services:
       - ./config/jellyfin/config:/config
       - ./config/jellyfin/cache:/cache
       - hetzner-media:/media:ro
+    # Mount /dev/dri for potential hardware acceleration (VA-API/QSV)
+    # Note: Virtio GPU may not support acceleration, but worth trying
+    devices:
+      - /dev/dri:/dev/dri
     # Use tmpfs for transcoding cache to improve I/O performance
     # This stores transcoded segments in RAM instead of disk
     tmpfs:
@@ -130,6 +134,7 @@ services:
       - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID}
       - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET}
       - TRAKT_LIST_ID=${TRAKT_LIST_ID}
+    devices:
       - /dev/dri:/dev/dri
     volumes:
       - ./config/jellyfin/jellyseerr:/config
